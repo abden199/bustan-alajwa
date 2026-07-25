@@ -32,6 +32,7 @@
     R.importFromDriveFile=function(x){go('POST','/api/import/upload',{fileId:x})};
     R.importFromSheet=function(x){go('POST','/api/import/upload',{sheetId:x})};
     R.exportToDriveFile=function(){go('GET','/api/export/download')};
+    R.exportToDriveFile=function(){window.open('/api/export-file','_blank')};
     window.google={script:{run:R}};
     console.log('gas-compat ready');
 })();
