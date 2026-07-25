@@ -276,32 +276,26 @@
     // ===== تسجيل الدخول والخروج =====
     // ============================================================
     function doLogin(){
-    var user=$('loginUser').value.trim();
-    var pass=$('loginPass').value.trim();
+    var userInput=document.getElementById('loginUser');
+    var passInput=document.getElementById('loginPass');
+    if(!userInput||!passInput){tst('خطأ في الصفحة','er');return}
+    var user=userInput.value.trim();
+    var pass=passInput.value.trim();
     if(!user||!pass){tst('أدخل البيانات','er');return}
-    var btn=document.querySelector('#loginPage .btn, #loginPage button');
-    if(btn){btn.disabled=true;btn.textContent='⏳ جاري الدخول...'}
     tst('جاري تسجيل الدخول...','inf');
-    google.script.run
-        .withSuccessHandler(function(r){
-            if(typeof r==='string'){try{r=JSON.parse(r)}catch(e){}}
-            if(r&&r.ok&&r.user){
-                CUR_USER=r.user;
-                if($('curUserName'))$('curUserName').textContent=CUR_USER.name;
-                tst('مرحباً '+CUR_USER.name+' — جاري تحميل البيانات...','ok');
-                $('loginPage').style.display='none';
-                $('mainPage').style.display='block';
-                setTimeout(function(){loadData()},500);
-            }else{
-                tst(r&&r.err?r.err:'بيانات غير صحيحة','er');
-                if(btn){btn.disabled=false;btn.textContent='تسجيل الدخول'}
-            }
-        })
-        .withFailureHandler(function(e){
-            tst('خطأ: '+e.message,'er');
-            if(btn){btn.disabled=false;btn.textContent='تسجيل الدخول'}
-        })
-        .srvAuthenticate(user,pass);
+    google.script.run.withSuccessHandler(function(r){
+        try{if(typeof r=='string')r=JSON.parse(r)}catch(e){}
+        if(r&&r.ok&&r.user){
+            CUR_USER=r.user;
+            document.getElementById('loginPage').style.display='none';
+            document.getElementById('mainPage').style.display='block';
+            loadData();
+        }else{
+            tst(r&&r.err?r.err:'بيانات غير صحيحة','er');
+        }
+    }).withFailureHandler(function(e){
+        tst('خطأ: '+e.message,'er');
+    }).srvAuthenticate(user,pass);
 }
 
     function doLogout(){ USER=null; $('loginPage').style.display='block'; $('mainApp').style.display='none'; $('lPass').value=''; }
@@ -339,28 +333,25 @@ function renderLinks(){
     // ============================================================
 function loadData(){
     tst('جاري سحب البيانات...','inf');
-    google.script.run
-        .withSuccessHandler(function(r){
-            if(typeof r=='string'){try{r=JSON.parse(r)}catch(e){}}
-            if(r&&r.ok&&r.d){
-                D.reps=r.d.r||[];
-                D.advances=r.d.a||[];
-                D.purchases=r.d.p||[];
-                D.expenses=r.d.x||[];
-                D.users=r.d.u||[];
-                D.advRequests=r.d.q||[];
-                D.suppliers=r.d.sup||[];
-                D.companies=r.d.comp||[];
-                try{renderAll()}catch(e){console.error(e)}
-                tst('تم تحميل البيانات','ok');
-            }else{
-                tst('فشل التحميل','er');
-            }
-        })
-        .withFailureHandler(function(e){
-            tst('خطأ: '+e.message,'er');
-        })
-        .srvGetData();
+    google.script.run.withSuccessHandler(function(r){
+        try{if(typeof r=='string')r=JSON.parse(r)}catch(e){}
+        if(r&&r.ok&&r.d){
+            D.reps=r.d.r||[];
+            D.advances=r.d.a||[];
+            D.purchases=r.d.p||[];
+            D.expenses=r.d.x||[];
+            D.users=r.d.u||[];
+            D.advRequests=r.d.q||[];
+            D.suppliers=r.d.sup||[];
+            D.companies=r.d.comp||[];
+            try{renderAll()}catch(e){console.error(e)}
+            tst('تم تحميل البيانات','ok');
+        }else{
+            tst('فشل التحميل','er');
+        }
+    }).withFailureHandler(function(e){
+        tst('خطأ: '+e.message,'er');
+    }).srvGetData();
 }
     function pullFromCloud(){
         if(MANUAL_ENTRY_ACTIVE){ tst('انتظر انتهاء الإدخال اليدوي','er'); return; }
