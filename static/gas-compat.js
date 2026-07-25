@@ -3,9 +3,22 @@
     var _s=null,_f=null;
     function go(m,u,b){
         var sf=_s,ff=_f;_s=null;_f=null;
-        var o={method:m,headers:{}};
+        var o={method:m,headers:{},credentials:'same-origin'};
         if(b!==undefined&&b!==null){o.headers['Content-Type']='application/json';o.body=JSON.stringify(b)}
-        fetch(u,o).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json()}).then(function(d){if(sf)sf(d)}).catch(function(e){console.error('ERR:',u,e);if(ff)ff({message:e.message})})
+        fetch(u,o).then(function(r){
+            return r.text().then(function(txt){
+                var data;
+                try{ data = txt ? JSON.parse(txt) : {}; }
+                catch(e){ throw new Error('استجابة غير صالحة من الخادم (HTTP '+r.status+')'); }
+                if(!r.ok){
+                    throw new Error(data && (data.err || data.error) ? (data.err || data.error) : ('HTTP '+r.status));
+                }
+                if(r.status===401){
+                    throw new Error('انتهت الجلسة، الرجاء تسجيل الدخول من جديد');
+                }
+                return data;
+            });
+        }).then(function(d){if(sf)sf(d)}).catch(function(e){console.error('ERR:',u,e);if(ff)ff({message:e.message})})
     }
     var R={_ok:true};
     R.withSuccessHandler=function(fn){_s=fn;return R};
@@ -31,7 +44,6 @@
     R.importFromUploadedFile=function(d,n){go('POST','/api/import/upload',{data:d,name:n})};
     R.importFromDriveFile=function(x){go('POST','/api/import/upload',{fileId:x})};
     R.importFromSheet=function(x){go('POST','/api/import/upload',{sheetId:x})};
-    R.exportToDriveFile=function(){go('GET','/api/export/download')};
     R.exportToDriveFile=function(){window.open('/api/export-file','_blank')};
     window.google={script:{run:R}};
     console.log('gas-compat ready');
