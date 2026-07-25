@@ -340,11 +340,30 @@ function renderLinks(){
     // ===== تحميل وعرض البيانات =====
     // ============================================================
     function loadData(){
-        loadLocal();
-        updateStats();
-        renderAll();
-        pullFromCloud();
-    }
+    tst('جاري سحب البيانات من الشيت — انتظر...','inf');
+    google.script.run
+        .withSuccessHandler(function(r){
+            if(typeof r==='string'){try{r=JSON.parse(r)}catch(e){}}
+            if(r&&r.ok&&r.d){
+                D.reps=r.d.r||[];
+                D.advances=r.d.a||[];
+                D.purchases=r.d.p||[];
+                D.expenses=r.d.x||[];
+                D.users=r.d.u||[];
+                D.advRequests=r.d.q||[];
+                D.suppliers=r.d.sup||[];
+                D.companies=r.d.comp||[];
+                try{renderAll()}catch(e){console.error('renderAll error:',e)}
+                tst('تم تحميل البيانات','ok');
+            }else{
+                tsto('فشل تحميل البيانات','er');
+            }
+        })
+        .withFailureHandler(function(e){
+            tsto('خطأ في التحميل: '+e.message,'er');
+        })
+        .srvGetData();
+}
 
     function pullFromCloud(){
         if(MANUAL_ENTRY_ACTIVE){ tst('انتظر انتهاء الإدخال اليدوي','er'); return; }
