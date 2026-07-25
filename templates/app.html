@@ -272,27 +272,32 @@
     // ===== تسجيل الدخول والخروج =====
     // ============================================================
     function doLogin(){
-        var u = $('lUser').value.trim(), p = $('lPass').value.trim();
-        if(!u||!p){ alert('أدخل البيانات'); return; }
-        tst('جاري الدخول...','inf');
-        srv('srvAuthenticate', u, p).then(function(r){
-            if(r && r.ok && r.user){
-                USER = r.user;
-                $('loginPage').style.display = 'none';
-                $('mainApp').style.display = 'block';
-                $('userName').textContent = USER.name;
-                var roleLabel = isAdmin() ? 'مدير' : isAll() ? 'صلاحيات كاملة' : isTax() ? 'ضريبة' : '';
-                $('userRole').textContent = roleLabel;
-                // إظهار/إخفاء حسب الصلاحيات
-                var adminOnly = ['menuUsers','menuBackup'];
-                adminOnly.forEach(function(id){ var el=$(id); if(el) el.style.display = isAdmin() ? '' : 'none'; });
-                if(isTax()){ goTo('tax', document.getElementById('menuTax')); }
-                else { goTo('reps', document.getElementById('menuReps')); }
+    var user=$('loginUser').value.trim();
+    var pass=$('loginPass').value.trim();
+    if(!user||!pass){tst('أدخل البيانات','er');return}
+    var btn=document.querySelector('#loginPage .btn, #loginPage button');
+    if(btn){btn.disabled=true;btn.textContent='⏳ جاري الدخول...'}
+    tst('جاري تسجيل الدخول...','inf');
+    google.script.run
+        .withSuccessHandler(function(r){
+            if(typeof r==='string'){try{r=JSON.parse(r)}catch(e){}}
+            if(r&&r.ok&&r.user){
+                CUR_USER=r.user;
+                $('loginPage').style.display='none';
+                $('mainPage').style.display='block';
+                if($('curUserName'))$('curUserName').textContent=CUR_USER.name;
                 loadData();
-                tst('مرحباً '+USER.name+' ('+roleLabel+')','ok');
-            } else { tst(r && r.err ? r.err : 'فشل الدخول','er'); }
-        }).catch(function(){ tst('خطأ في الاتصال','er'); });
-    }
+            }else{
+                tst(r&&r.err?r.err:'بيانات غير صحيحة','er');
+                if(btn){btn.disabled=false;btn.textContent='تسجيل الدخول'}
+            }
+        })
+        .withFailureHandler(function(e){
+            tst('خطأ: '+e.message,'er');
+            if(btn){btn.disabled=false;btn.textContent='تسجيل الدخول'}
+        })
+        .srvAuthenticate(user,pass);
+}
 
     function doLogout(){ USER=null; $('loginPage').style.display='block'; $('mainApp').style.display='none'; $('lPass').value=''; }
 function copyLink(txt){
