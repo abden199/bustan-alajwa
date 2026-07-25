@@ -1,21 +1,20 @@
 #!/usr/bin/env python3
-"""بستان العجوة — Flask + SQLite (محلي) / Google Sheets (سحابي)"""
+"""بستان العجوة — Flask + Apps Script + Google Sheets"""
 
-import os, json, base64, sqlite3
+import os, json, base64, sqlite3, urllib.request, urllib.parse
 from datetime import datetime
 from flask import Flask, request, jsonify, render_template, g
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'bustan-alajwa-2026'
 
-SHEET_ID = os.environ.get('SHEET_ID', '')
-GOOGLE_CREDS = os.environ.get('GOOGLE_CREDS', '')
-USE_SHEETS = bool(SHEET_ID and GOOGLE_CREDS)
+APPS_SCRIPT_URL = os.environ.get('APPS_SCRIPT_URL', '')
+USE_SHEETS = bool(APPS_SCRIPT_URL)
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'bustan.db')
 
 print("=" * 50)
 if USE_SHEETS:
-    print(" mode: Google Sheets")
+    print(" mode: Google Sheets (Apps Script)")
 else:
     print(" mode: SQLite (local)")
     print(" db: " + DB_PATH)
@@ -37,6 +36,48 @@ def num(v):
         return float(v) if v not in (None, '', 'None') else 0
     except:
         return 0
+
+
+# ================================================================
+# Apps Script Proxy
+# ================================================================
+def sheets_api_get(params):
+    url = APPS_SCRIPT_URL + '?' + urllib.parse.urlencode(params)
+    req = urllib.request.Request(url, method='GET')
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        return json.loads(resp.read().decode('utf-8'))
+
+def sheets_api_post(body):
+    data = json.dumps(body).encode('utf-8')
+    req = urllib.request.Request(APPS_SCRIPT_URL, data=data, method='POST')
+    req.add_header('Content-Type', 'application/json')
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        return json.loads(resp.read().decode('utf-8'))
+
+def sheets_read(tab):
+    result = sheets_api_get({'action': 'read', 'table': tab})
+    if result.get('ok'):
+        return result.get('data', [])
+    return []
+
+def sheets_write(tab, data):
+    return sheets_api_post({'action': 'write', 'table': tab, 'data': data})
+
+def sheets_insert(tab, item):
+    result = sheets_api_post({'action': 'insert', 'table': tab, 'item': item})
+    return result.get('id', 0) if result.get('ok') else 0
+
+def sheets_update(tab, id_val, updates):
+    return sheets_api_post({'action': 'update', 'table': tab, 'id': id_val, 'item': updates})
+
+def sheets_delete(tab, id_val):
+    return sheets_api_post({'action': 'delete', 'table': tab, 'id': id_val})
+
+def sheets_filtered(tab, col, val):
+    result = sheets_api_get({'action': 'readFiltered', 'table': tab, 'col': col, 'val': val})
+    if result.get('ok'):
+        return result.get('data', [])
+    return []
 
 
 # ================================================================
@@ -80,12 +121,7 @@ def sqlite_write(tab, data, headers):
     db = get_db()
     db.execute("DELETE FROM " + tab)
     for item in data:
-        vals = []
-        for h in headers:
-            v = item.get(h, '')
-            if v is None:
-                v = ''
-            vals.append(v)
+        vals = [item.get(h, '') if item.get(h) is not None else '' for h in headers]
         ph = ','.join(['?'] * len(headers))
         cols = ','.join(['"' + c + '"' if c == 'desc' else c for c in headers])
         db.execute("INSERT INTO " + tab + " (" + cols + ") VALUES (" + ph + ")", vals)
@@ -100,12 +136,7 @@ def sqlite_insert(tab, item):
     nid = sqlite_next_id(tab)
     item['id'] = nid
     headers = TABLES[tab]
-    vals = []
-    for h in headers:
-        v = item.get(h, '')
-        if v is None:
-            v = ''
-        vals.append(v)
+    vals = [item.get(h, '') if item.get(h) is not None else '' for h in headers]
     ph = ','.join(['?'] * len(headers))
     cols = ','.join(['"' + c + '"' if c == 'desc' else c for c in headers])
     db.execute("INSERT INTO " + tab + " (" + cols + ") VALUES (" + ph + ")", vals)
@@ -134,90 +165,6 @@ def sqlite_filtered(tab, col, val):
 
 
 # ================================================================
-# Google Sheets
-# ================================================================
-if USE_SHEETS:
-    import gspread
-    from google.oauth2.service_account import Credentials
-
-    def get_gc():
-        if 'gc' not in g:
-            creds_dict = json.loads(GOOGLE_CREDS)
-            scopes = [
-                'https://www.googleapis.com/auth/spreadsheets',
-                'https://www.googleapis.com/auth/drive'
-            ]
-            creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
-            g.gc = gspread.authorize(creds)
-        return g.gc
-
-    def sheets_get(tab):
-        sh = get_gc().open_by_key(SHEET_ID)
-        try:
-            return sh.worksheet(tab)
-        except gspread.exceptions.WorksheetNotFound:
-            return sh.add_worksheet(title=tab, rows=1000, cols=20)
-
-    def sheets_read(tab):
-        return sheets_get(tab).get_all_records()
-
-    def sheets_write(tab, data, headers):
-        ws = sheets_get(tab)
-        ws.clear()
-        rows = [headers]
-        for item in data:
-            row = []
-            for h in headers:
-                val = item.get(h, '')
-                if val is None:
-                    val = ''
-                row.append(val)
-            rows.append(row)
-        ws.update('A1', rows)
-
-    def sheets_next_id(tab):
-        mx = 0
-        for r in sheets_read(tab):
-            try:
-                if int(r.get('id', 0)) > mx:
-                    mx = int(r['id'])
-            except:
-                pass
-        return mx + 1
-
-    def sheets_insert(tab, item):
-        nid = sheets_next_id(tab)
-        item['id'] = nid
-        data = sheets_read(tab)
-        data.append(item)
-        sheets_write(tab, data, TABLES[tab])
-        return nid
-
-    def sheets_update(tab, id_val, updates):
-        data = sheets_read(tab)
-        for row in data:
-            if int(row.get('id', 0)) == int(id_val):
-                for k, v in updates.items():
-                    row[k] = v
-                break
-        sheets_write(tab, data, TABLES[tab])
-
-    def sheets_delete(tab, id_val):
-        data = [r for r in sheets_read(tab) if int(r.get('id', 0)) != int(id_val)]
-        sheets_write(tab, data, TABLES[tab])
-
-    def sheets_filtered(tab, col, val):
-        return [r for r in sheets_read(tab) if str(r.get(col, '')) == str(val)]
-
-    def sheets_init():
-        if not sheets_read('users'):
-            sheets_write('users', [
-                {'id': 1, 'username': 'admin', 'password': 'admin123',
-                 'role': 'admin', 'name': 'مدير النظام', 'active': 'true'}
-            ], TABLES['users'])
-
-
-# ================================================================
 # واجهة موحدة
 # ================================================================
 def db_read(tab):
@@ -225,7 +172,7 @@ def db_read(tab):
 
 def db_write(tab, data):
     if USE_SHEETS:
-        sheets_write(tab, data, TABLES[tab])
+        sheets_write(tab, data)
     else:
         sqlite_write(tab, data, TABLES[tab])
 
@@ -618,11 +565,7 @@ def api_export():
 # ================================================================
 if USE_SHEETS:
     with app.app_context():
-        try:
-            sheets_init()
-            print("Google Sheets connected")
-        except Exception as e:
-            print("Sheets error: " + str(e))
+        print("Apps Script connected: " + APPS_SCRIPT_URL[:50] + "...")
 else:
     with app.app_context():
         sqlite_init()
