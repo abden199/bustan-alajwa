@@ -1,34 +1,47 @@
 #!/usr/bin/env python3
 """بستان العجوة — Flask + Apps Script + Google Sheets"""
-
-import os, json, base64, sqlite3, urllib.request, urllib.parse
+import os, json, base64, sqlite3, urllib.request, urllib.parse, secrets, logging
+from functools import wraps
 from datetime import datetime
-from flask import Flask, request, jsonify, render_template, g
+from flask import Flask, request, jsonify, render_template, g, session
+
+logging.basicConfig(level=logging.INFO)
+log = logging.getLogger("bustan")
+
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'bustan-alajwa-2026'
+
+# --- الأمان: SECRET_KEY من متغير بيئة، مع مفتاح عشوائي كحل احتياطي ---
+# ملاحظة: لو ما ضبطت SECRET_KEY في البيئة، الجلسات تنتهي عند كل إعادة تشغيل
+# (لأن المفتاح العشوائي يتغيّر). اضبط متغير البيئة SECRET_KEY في الإنتاج.
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', secrets.token_hex(32))
 
 APPS_SCRIPT_URL = os.environ.get('APPS_SCRIPT_URL', '')
 USE_SHEETS = bool(APPS_SCRIPT_URL)
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'bustan.db')
 
-print("=" * 50)
+# --- الأمان: وضع التصحيح (debug) يُفعّل فقط عبر متغير بيئة صريح ---
+# لا تشغّل debug=True في الإنتاج أبداً — يكشف تتبّع الأخطاء الكامل للزوار.
+DEBUG_MODE = os.environ.get('FLASK_DEBUG', '0') == '1'
+
+log.info("=" * 50)
 if USE_SHEETS:
-    print(" mode: Google Sheets (Apps Script)")
+    log.info(" mode: Google Sheets (Apps Script)")
 else:
-    print(" mode: SQLite (local)")
-    print(" db: " + DB_PATH)
-print("=" * 50)
+    log.info(" mode: SQLite (local)")
+    log.info(" db: " + DB_PATH)
+log.info("=" * 50)
 
 TABLES = {
-    'users':        ['id','username','password','role','name','active'],
-    'reps':         ['id','name','phone','dept','notes','active','pin'],
-    'advances':     ['id','repId','amount','date','purpose','notes','status','settleDate'],
-    'purchases':    ['id','advId','amount','taxableAmount','taxAmount','invoiceType','invoiceNo','costCenter','desc','date','notes','supplierName','supplierTaxNo','companyId'],
-    'expenses':     ['id','repId','advId','amount','desc','date','costCenter','accountantNotes','managerNotes','status','actionDate'],
+    'users': ['id','username','password','role','name','active'],
+    'reps': ['id','name','phone','dept','notes','active','pin'],
+    'advances': ['id','repId','amount','date','purpose','notes','status','settleDate'],
+    'purchases': ['id','advId','amount','taxableAmount','taxAmount','invoiceType','invoiceNo','costCenter','desc','date','notes','supplierName','supplierTaxNo','companyId'],
+    'expenses': ['id','repId','advId','amount','desc','date','costCenter','accountantNotes','managerNotes','status','actionDate'],
     'adv_requests': ['id','repId','amount','purpose','notes','status','requestDate','actionDate'],
-    'suppliers':    ['id','name','taxNo','phone','email','active'],
-    'companies':    ['id','name','taxNo','crNo','address','active']
+    'suppliers': ['id','name','taxNo','phone','email','active'],
+    'companies': ['id','name','taxNo','crNo','address','active']
 }
 
 def num(v):
@@ -37,6 +50,28 @@ def num(v):
     except:
         return 0
 
+# ================================================================
+# الأمان: حراسة الجلسة لمسارات الكتابة والقراءة الحساسة
+# ================================================================
+def login_required(f):
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        if not session.get('user_id'):
+            return jsonify({'ok': False, 'success': False, 'err': 'يجب تسجيل الدخول'}), 401
+        return f(*args, **kwargs)
+    return wrapper
+
+def role_required(*roles):
+    def decorator(f):
+        @wraps(f)
+        def wrapper(*args, **kwargs):
+            if not session.get('user_id'):
+                return jsonify({'ok': False, 'success': False, 'err': 'يجب تسجيل الدخول'}), 401
+            if session.get('role') not in roles:
+                return jsonify({'ok': False, 'success': False, 'err': 'صلاحيات غير كافية'}), 403
+            return f(*args, **kwargs)
+        return wrapper
+    return decorator
 
 # ================================================================
 # Apps Script Proxy
@@ -79,7 +114,6 @@ def sheets_filtered(tab, col, val):
         return result.get('data', [])
     return []
 
-
 # ================================================================
 # SQLite
 # ================================================================
@@ -111,7 +145,11 @@ def sqlite_init():
     db.execute("CREATE TABLE IF NOT EXISTS suppliers (id INTEGER PRIMARY KEY, name TEXT, taxNo TEXT, phone TEXT, email TEXT, active TEXT DEFAULT 'true')")
     db.execute("CREATE TABLE IF NOT EXISTS companies (id INTEGER PRIMARY KEY, name TEXT, taxNo TEXT, crNo TEXT, address TEXT, active TEXT DEFAULT 'true')")
     if db.execute("SELECT COUNT(*) FROM users").fetchone()[0] == 0:
-        db.execute("INSERT INTO users VALUES (1,'admin','admin123','admin','مدير النظام','true')")
+        # الأمان: كلمة المرور الافتراضية الآن مُشفّرة (hash) بدل نص صريح
+        db.execute(
+            "INSERT INTO users (id, username, password, role, name, active) VALUES (1,?,?,?,?,?)",
+            ('admin', generate_password_hash('admin123'), 'admin', 'مدير النظام', 'true')
+        )
     db.commit()
 
 def sqlite_read(tab):
@@ -133,6 +171,7 @@ def sqlite_next_id(tab):
 
 def sqlite_insert(tab, item):
     db = get_db()
+    # ملاحظة: ما زال فيه احتمال تعارض بسيط تحت تزامن عالٍ — بند منفصل في مرحلة "الجودة"
     nid = sqlite_next_id(tab)
     item['id'] = nid
     headers = TABLES[tab]
@@ -162,7 +201,6 @@ def sqlite_delete(tab, id_val):
 
 def sqlite_filtered(tab, col, val):
     return dict_all(get_db().execute("SELECT * FROM " + tab + " WHERE " + col + "=?", [val]).fetchall())
-
 
 # ================================================================
 # واجهة موحدة
@@ -194,7 +232,6 @@ def db_delete(tab, id_val):
 def db_filtered(tab, col, val):
     return sheets_filtered(tab, col, val) if USE_SHEETS else sqlite_filtered(tab, col, val)
 
-
 # ================================================================
 # صفحات HTML
 # ================================================================
@@ -209,11 +246,12 @@ def page_router():
     }
     return render_template(pages.get(page, 'index.html'))
 
-
 # ================================================================
 # API: البيانات
+# (محمية الآن بتسجيل الدخول — كانت مفتوحة بالكامل سابقاً)
 # ================================================================
 @app.route('/api/data')
+@login_required
 def api_data():
     try:
         return jsonify({'ok': True, 'd': {
@@ -227,9 +265,11 @@ def api_data():
             'comp': db_read('companies')
         }})
     except Exception as e:
+        log.exception("api_data failed")
         return jsonify({'ok': False, 'err': str(e)})
 
 @app.route('/api/report-data')
+@login_required
 def api_report():
     try:
         return jsonify({'ok': True, 'd': {
@@ -241,9 +281,11 @@ def api_report():
             'comp': db_read('companies')
         }})
     except Exception as e:
+        log.exception("api_report failed")
         return jsonify({'ok': False, 'err': str(e)})
 
 @app.route('/api/rep-data/<int:rid>')
+@login_required
 def api_rep(rid):
     try:
         advs = db_filtered('advances', 'repId', rid)
@@ -251,8 +293,8 @@ def api_rep(rid):
         purs = [p for p in db_read('purchases') if int(p.get('advId', 0)) in ids]
         return jsonify({'ok': True, 'd': {'a': advs, 'p': purs}})
     except Exception as e:
+        log.exception("api_rep failed")
         return jsonify({'ok': False, 'err': str(e)})
-
 
 # ================================================================
 # API: المصادقة
@@ -276,41 +318,71 @@ def api_auth():
             u_pass = str(u.get('password', '')).strip().strip("'").strip('"')
             u_active = str(u.get('active', 'true')).strip().lower()
 
-            if u_user == username and u_pass == password:
+            if u_user != username:
+                continue
+
+            # الأمان: يدعم كلمات المرور المُشفّرة (hash) الجديدة، ويظل متوافقاً
+            # مؤقتاً مع أي كلمة مرور قديمة محفوظة كنص صريح لتسهيل الترحيل.
+            password_ok = False
+            if u_pass.startswith('pbkdf2:') or u_pass.startswith('scrypt:'):
+                password_ok = check_password_hash(u_pass, password)
+            else:
+                password_ok = (u_pass == password)
+                if password_ok:
+                    # ترقية تلقائية لكلمة مرور مُشفّرة عند أول دخول ناجح
+                    try:
+                        db_update('users', u.get('id'), {'password': generate_password_hash(password)})
+                    except Exception:
+                        log.exception("password auto-upgrade failed")
+
+            if password_ok:
                 if u_active in ('true', '1', 'yes'):
+                    session['user_id'] = int(u.get('id', 0))
+                    session['role'] = u.get('role', 'add')
+                    session.permanent = True
                     return jsonify({'ok': True, 'user': {
                         'id': int(u.get('id', 0)),
                         'username': u.get('username', ''),
                         'role': u.get('role', 'add'),
                         'name': u.get('name', username)
                     }})
+                return jsonify({'ok': False, 'err': 'الحساب غير مفعّل'})
+
         return jsonify({'ok': False, 'err': 'بيانات الدخول غير صحيحة'})
     except Exception as e:
+        log.exception("api_auth failed")
         return jsonify({'ok': False, 'err': str(e)})
+
+@app.route('/api/logout', methods=['POST'])
+def api_logout():
+    session.clear()
+    return jsonify({'ok': True})
 
 # ================================================================
 # API: حفظ الكل
 # ================================================================
 @app.route('/api/save-all', methods=['POST'])
+@login_required
 def api_save_all():
     try:
         d = request.json or {}
         if isinstance(d, list):
             return jsonify({'success': False, 'err': 'صيغة غير صحيحة'})
         for key, tab in [('reps', 'reps'), ('advances', 'advances'),
-                         ('purchases', 'purchases'), ('expenses', 'expenses'),
-                         ('suppliers', 'suppliers'), ('companies', 'companies')]:
+                          ('purchases', 'purchases'), ('expenses', 'expenses'),
+                          ('suppliers', 'suppliers'), ('companies', 'companies')]:
             if key in d:
                 db_write(tab, d[key])
         return jsonify({'success': True})
     except Exception as e:
+        log.exception("api_save_all failed")
         return jsonify({'success': False, 'err': str(e)})
-
 
 # ================================================================
 # API: الفواتير
 # ================================================================
 @app.route('/api/purchases', methods=['POST'])
+@login_required
 def api_add_purchase():
     try:
         d = request.json or {}
@@ -333,9 +405,11 @@ def api_add_purchase():
         })
         return jsonify({'success': True, 'id': nid})
     except Exception as e:
+        log.exception("api_add_purchase failed")
         return jsonify({'success': False, 'err': str(e)})
 
 @app.route('/api/purchases/<int:pid>', methods=['PUT'])
+@login_required
 def api_upd_purchase(pid):
     try:
         d = request.json or {}
@@ -344,21 +418,24 @@ def api_upd_purchase(pid):
         db_update('purchases', pid, d)
         return jsonify({'success': True})
     except Exception as e:
+        log.exception("api_upd_purchase failed")
         return jsonify({'success': False, 'err': str(e)})
 
 @app.route('/api/purchases/<int:pid>', methods=['DELETE'])
+@login_required
 def api_del_purchase(pid):
     try:
         db_delete('purchases', pid)
         return jsonify({'success': True})
     except Exception as e:
+        log.exception("api_del_purchase failed")
         return jsonify({'success': False, 'err': str(e)})
-
 
 # ================================================================
 # API: العهد
 # ================================================================
 @app.route('/api/advances', methods=['POST'])
+@login_required
 def api_add_advance():
     try:
         d = request.json or {}
@@ -375,9 +452,11 @@ def api_add_advance():
         })
         return jsonify({'success': True, 'id': nid})
     except Exception as e:
+        log.exception("api_add_advance failed")
         return jsonify({'success': False, 'err': str(e)})
 
 @app.route('/api/advances/<int:aid>', methods=['PUT'])
+@login_required
 def api_upd_advance(aid):
     try:
         d = request.json or {}
@@ -386,21 +465,24 @@ def api_upd_advance(aid):
         db_update('advances', aid, d)
         return jsonify({'success': True})
     except Exception as e:
+        log.exception("api_upd_advance failed")
         return jsonify({'success': False, 'err': str(e)})
 
 @app.route('/api/advances/<int:aid>', methods=['DELETE'])
+@login_required
 def api_del_advance(aid):
     try:
         db_delete('advances', aid)
         return jsonify({'success': True})
     except Exception as e:
+        log.exception("api_del_advance failed")
         return jsonify({'success': False, 'err': str(e)})
-
 
 # ================================================================
 # API: طلبات العهد
 # ================================================================
 @app.route('/api/adv-requests', methods=['POST'])
+@login_required
 def api_add_request():
     try:
         d = request.json or {}
@@ -417,9 +499,11 @@ def api_add_request():
         })
         return jsonify({'success': True, 'id': nid})
     except Exception as e:
+        log.exception("api_add_request failed")
         return jsonify({'success': False, 'err': str(e)})
 
 @app.route('/api/adv-requests/<int:rid>', methods=['PUT'])
+@login_required
 def api_upd_request(rid):
     try:
         d = request.json or {}
@@ -428,13 +512,14 @@ def api_upd_request(rid):
         db_update('adv_requests', rid, d)
         return jsonify({'success': True})
     except Exception as e:
+        log.exception("api_upd_request failed")
         return jsonify({'success': False, 'err': str(e)})
-
 
 # ================================================================
 # API: المصروفات
 # ================================================================
 @app.route('/api/expenses', methods=['POST'])
+@login_required
 def api_add_expenses():
     try:
         items = request.json or []
@@ -457,9 +542,11 @@ def api_add_expenses():
             })
         return jsonify({'success': True})
     except Exception as e:
+        log.exception("api_add_expenses failed")
         return jsonify({'success': False, 'err': str(e)})
 
 @app.route('/api/expenses/<int:eid>', methods=['PUT'])
+@login_required
 def api_upd_expense(eid):
     try:
         d = request.json or {}
@@ -468,24 +555,33 @@ def api_upd_expense(eid):
         db_update('expenses', eid, d)
         return jsonify({'success': True})
     except Exception as e:
+        log.exception("api_upd_expense failed")
         return jsonify({'success': False, 'err': str(e)})
-
 
 # ================================================================
 # API: المستخدمين والموردين والشركات
+# (تقتصر الآن على دور admin — كانت مفتوحة لأي متصل)
 # ================================================================
 @app.route('/api/users', methods=['POST'])
+@role_required('admin')
 def api_users():
     try:
         data = request.json or []
         if isinstance(data, dict):
             data = [data]
+        # الأمان: تشفير أي كلمة مرور غير مُشفّرة قبل الحفظ
+        for u in data:
+            pw = str(u.get('password', ''))
+            if pw and not (pw.startswith('pbkdf2:') or pw.startswith('scrypt:')):
+                u['password'] = generate_password_hash(pw)
         db_write('users', data)
         return jsonify({'success': True})
     except Exception as e:
+        log.exception("api_users failed")
         return jsonify({'success': False, 'err': str(e)})
 
 @app.route('/api/suppliers', methods=['POST'])
+@login_required
 def api_suppliers():
     try:
         data = request.json or []
@@ -494,9 +590,11 @@ def api_suppliers():
         db_write('suppliers', data)
         return jsonify({'success': True})
     except Exception as e:
+        log.exception("api_suppliers failed")
         return jsonify({'success': False, 'err': str(e)})
 
 @app.route('/api/companies', methods=['POST'])
+@login_required
 def api_companies():
     try:
         data = request.json or []
@@ -505,11 +603,12 @@ def api_companies():
         db_write('companies', data)
         return jsonify({'success': True})
     except Exception as e:
+        log.exception("api_companies failed")
         return jsonify({'success': False, 'err': str(e)})
-
 
 # ================================================================
 # API: الاستيراد والتصدير
+# (مقتصرة الآن على admin — تحتوي على كل بيانات النظام)
 # ================================================================
 KEY_MAP = {
     'reps': 'reps', 'advances': 'advances', 'purchases': 'purchases',
@@ -521,6 +620,7 @@ KEY_MAP = {
 }
 
 @app.route('/api/import/upload', methods=['POST'])
+@role_required('admin')
 def api_import():
     try:
         d = request.json or {}
@@ -552,9 +652,11 @@ def api_import():
             msg += " — تخطي: " + ", ".join(skipped)
         return jsonify({'ok': True, 'msg': msg, 'count': imported})
     except Exception as e:
+        log.exception("api_import failed")
         return jsonify({'ok': False, 'err': str(e)})
 
 @app.route('/api/export/download')
+@role_required('admin')
 def api_export():
     try:
         data = {}
@@ -562,26 +664,11 @@ def api_export():
             data[tab] = db_read(tab)
         return jsonify({'ok': True, 'data': data})
     except Exception as e:
+        log.exception("api_export failed")
         return jsonify({'ok': False, 'err': str(e)})
 
-@app.route('/api/debug-users')
-def debug_users():
-    try:
-        users = db_read('users')
-        result = []
-        for u in users:
-            result.append({
-                'id': u.get('id'),
-                'username': repr(u.get('username')),
-                'password': repr(u.get('password')),
-                'password_type': type(u.get('password')).__name__,
-                'active': repr(u.get('active')),
-                'active_type': type(u.get('active')).__name__
-            })
-        return jsonify({'ok': True, 'count': len(users), 'users': result})
-    except Exception as e:
-        return jsonify({'ok': False, 'err': str(e)})
-        @app.route('/api/export-file')
+@app.route('/api/export-file')
+@role_required('admin')
 def api_export_file():
     try:
         data = {}
@@ -595,18 +682,23 @@ def api_export_file():
             headers={'Content-Disposition': 'attachment; filename=bustan_backup.json'}
         )
     except Exception as e:
+        log.exception("api_export_file failed")
         return jsonify({'ok': False, 'err': str(e)})
+
+# ملاحظة أمان: مسار /api/debug-users الأصلي تم حذفه بالكامل —
+# كان يعرض كلمات المرور (حتى بعد التشفير، لا داعي لكشفها) لأي زائر بدون تسجيل دخول.
+
 # ================================================================
 # التشغيل
 # ================================================================
 if USE_SHEETS:
     with app.app_context():
-        print("Apps Script connected: " + APPS_SCRIPT_URL[:50] + "...")
+        log.info("Apps Script connected: " + APPS_SCRIPT_URL[:50] + "...")
 else:
     with app.app_context():
         sqlite_init()
-        print("SQLite ready")
+        log.info("SQLite ready")
 
 if __name__ == '__main__':
-    print(" http://localhost:5000")
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    log.info(" http://localhost:5000")
+    app.run(host='0.0.0.0', port=5000, debug=DEBUG_MODE)
