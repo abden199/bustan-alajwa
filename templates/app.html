@@ -275,27 +275,32 @@
     // ============================================================
     // ===== تسجيل الدخول والخروج =====
     // ============================================================
-    function doLogin(){
-    var userInput=document.getElementById('loginUser');
-    var passInput=document.getElementById('loginPass');
-    if(!userInput||!passInput){tst('خطأ في الصفحة','er');return}
-    var user=userInput.value.trim();
-    var pass=passInput.value.trim();
-    if(!user||!pass){tst('أدخل البيانات','er');return}
-    tst('جاري تسجيل الدخول...','inf');
-    google.script.run.withSuccessHandler(function(r){
-        try{if(typeof r=='string')r=JSON.parse(r)}catch(e){}
-        if(r&&r.ok&&r.user){
-            CUR_USER=r.user;
-            document.getElementById('loginPage').style.display='none';
-            document.getElementById('mainPage').style.display='block';
-            loadData();
-        }else{
-            tst(r&&r.err?r.err:'بيانات غير صحيحة','er');
-        }
-    }).withFailureHandler(function(e){
-        tst('خطأ: '+e.message,'er');
-    }).srvAuthenticate(user,pass);
+    function doLogin() {
+    var username = document.getElementById('lUser').value.trim();
+    var password = document.getElementById('lPass').value.trim();
+
+    if (!username || !password) {
+        showToast('أدخل اسم المستخدم وكلمة المرور', 'warn');
+        return;
+    }
+
+    // مقارنة مع بيانات المستخدمين
+    var found = D.users.find(function(u) {
+        return u.username === username && u.password === password;
+    });
+
+    if (found) {
+        USER = found;
+        document.getElementById('loginPage').style.display = 'none';
+        document.getElementById('mainApp').style.display = 'flex';
+        document.getElementById('userName').textContent = found.name;
+        document.getElementById('userRole').textContent = found.role;
+        showToast('مرحباً ' + found.name, 'success');
+        refreshStats();
+        renderReps();
+    } else {
+        showToast('بيانات الدخول غير صحيحة', 'error');
+    }
 }
 
     function doLogout(){ USER=null; $('loginPage').style.display='block'; $('mainApp').style.display='none'; $('lPass').value=''; }
