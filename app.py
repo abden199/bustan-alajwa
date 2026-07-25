@@ -581,6 +581,21 @@ def debug_users():
         return jsonify({'ok': True, 'count': len(users), 'users': result})
     except Exception as e:
         return jsonify({'ok': False, 'err': str(e)})
+        @app.route('/api/export-file')
+def api_export_file():
+    try:
+        data = {}
+        for tab in TABLES:
+            data[tab] = db_read(tab)
+        json_str = json.dumps(data, ensure_ascii=False, indent=2)
+        from flask import Response
+        return Response(
+            json_str,
+            mimetype='application/json',
+            headers={'Content-Disposition': 'attachment; filename=bustan_backup.json'}
+        )
+    except Exception as e:
+        return jsonify({'ok': False, 'err': str(e)})
 # ================================================================
 # التشغيل
 # ================================================================
