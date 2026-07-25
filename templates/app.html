@@ -1167,57 +1167,42 @@
 
     // ===== رفع ملف JSON (مصحح — يدعم العربية) =====
     function uploadFile(){
-    var fileInput = document.getElementById('fileInput');
-    if(!fileInput || !fileInput.files || !fileInput.files.length){
-        tst('اختر ملف JSON','er');
-        return;
-    }
-    var file = fileInput.files[0];
-    if(!file.name.endsWith('.json')){
-        tst('يجب أن يكون ملف JSON','er');
-        return;
-    }
-    if(!confirm('سيتم استبدال جميع البيانات الحالية. متأكد؟')) return;
-
-    tst('جاري قراءة الملف...','inf');
-
-    var reader = new FileReader();
-    reader.onload = function(e){
-        try {
-            var content = e.target.result;
-            // التحقق من أن الملف صالح
-            var testData = JSON.parse(content);
-            var keys = Object.keys(testData);
-            tst('تم قراءة الملف: '+keys.length+' مفتاح','inf');
-
-            // تحويل آمن للعربية
-            var base64 = btoa(unescape(encodeURIComponent(content)));
-
-            tst('جاري الاستيراد...','inf');
+    var fi=document.getElementById('fileInput');
+    if(!fi||!fi.files||!fi.files.length){tsto('اختر ملف JSON','er');return}
+    var file=fi.files[0];
+    if(!file.name.endsWith('.json')){tsto('يجب أن يكون ملف JSON','er');return}
+    if(!confirm('سيتم استبدال جميع البيانات الحالية. متأكد؟'))return;
+    tsto('جاري القراءة...','inf');
+    var reader=new FileReader();
+    reader.onload=function(e){
+        try{
+            var content=e.target.result;
+            JSON.parse(content);
+            var base64=btoa(unescape(encodeURIComponent(content)));
+            tsto('جاري الاستيراد...','inf');
             google.script.run
                 .withSuccessHandler(function(res){
-                    if(typeof res==='string'){ try{ res=JSON.parse(res); } catch(e){} }
-                    if(res && res.ok){
-                        tst('✅ '+res.msg,'ok');
+                    if(typeof res==='string'){try{res=JSON.parse(res)}catch(e){}}
+                    if(res&&res.ok){
+                        tsto('✅ '+res.msg,'ok');
                         loadData();
-                    } else {
-                        tst('❌ '+(res && res.err ? res.err : 'فشل'),'er');
+                    }else{
+                        tsto('❌ '+(res&&res.err?res.err:'فشل'),'er');
                     }
+                    fi.value='';
                 })
                 .withFailureHandler(function(err){
-                    tst('❌ خطأ: '+err.message,'er');
+                    tsto('❌ خطأ: '+err.message,'er');
+                    fi.value='';
                 })
-                .importFromUploadedFile(base64, file.name);
-        } catch(err){
-            tst('❌ الملف غير صالح: '+err.message,'er');
+                .importFromUploadedFile(base64,file.name);
+        }catch(err){
+            tsto('❌ الملف غير صالح: '+err.message,'er');
+            fi.value='';
         }
     };
-    reader.onerror = function(){
-        tst('فشل قراءة الملف','er');
-    };
-    reader.readAsText(file, 'UTF-8');
+    reader.readAsText(file,'UTF-8');
 }
-
     function importFromDrive(){
         var fileId = $('driveFileId') ? $('driveFileId').value.trim() : '';
         if(!fileId){ alert('أدخل File ID'); return; }
@@ -1241,12 +1226,9 @@
     }
 
     function exportData(){
-        tst('جاري التصدير إلى Drive...','inf');
-        srv('exportToDriveFile').then(function(r){
-            if(r && r.ok){ tst('✅ تم التصدير: '+r.msg,'ok'); }
-            else { tst('❌ فشل التصدير','er'); }
-        }).catch(function(){ tst('خطأ','er'); });
-    }
+    window.open('/api/export-file','_blank');
+    tsto('جاري تحميل الملف...','ok');
+}
 
     // ===== تصدير Excel شامل =====
     function exportAllExcel(){
