@@ -264,24 +264,29 @@ def api_auth():
         if d is None:
             return jsonify({'ok': False, 'err': 'لا توجد بيانات'})
         if isinstance(d, list):
-            username = str(d[0]) if len(d) > 0 else ''
-            password = str(d[1]) if len(d) > 1 else ''
+            username = str(d[0]).strip().strip("'").strip('"')
+            password = str(d[1]).strip().strip("'").strip('"')
         else:
-            username = str(d.get('username', ''))
-            password = str(d.get('password', ''))
-        for u in db_read('users'):
-            if str(u.get('username', '')) == username and str(u.get('password', '')) == password:
-                if str(u.get('active', 'true')) == 'true':
+            username = str(d.get('username', '')).strip().strip("'").strip('"')
+            password = str(d.get('password', '')).strip().strip("'").strip('"')
+
+        users = db_read('users')
+        for u in users:
+            u_user = str(u.get('username', '')).strip().strip("'").strip('"')
+            u_pass = str(u.get('password', '')).strip().strip("'").strip('"')
+            u_active = str(u.get('active', 'true')).strip().lower()
+
+            if u_user == username and u_pass == password:
+                if u_active in ('true', '1', 'yes'):
                     return jsonify({'ok': True, 'user': {
-                        'id': int(u['id']),
-                        'username': u['username'],
+                        'id': int(u.get('id', 0)),
+                        'username': u.get('username', ''),
                         'role': u.get('role', 'add'),
                         'name': u.get('name', username)
                     }})
         return jsonify({'ok': False, 'err': 'بيانات الدخول غير صحيحة'})
     except Exception as e:
         return jsonify({'ok': False, 'err': str(e)})
-
 
 # ================================================================
 # API: حفظ الكل
