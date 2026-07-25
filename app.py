@@ -559,7 +559,23 @@ def api_export():
     except Exception as e:
         return jsonify({'ok': False, 'err': str(e)})
 
-
+@app.route('/api/debug-users')
+def debug_users():
+    try:
+        users = db_read('users')
+        result = []
+        for u in users:
+            result.append({
+                'id': u.get('id'),
+                'username': repr(u.get('username')),
+                'password': repr(u.get('password')),
+                'password_type': type(u.get('password')).__name__,
+                'active': repr(u.get('active')),
+                'active_type': type(u.get('active')).__name__
+            })
+        return jsonify({'ok': True, 'count': len(users), 'users': result})
+    except Exception as e:
+        return jsonify({'ok': False, 'err': str(e)})
 # ================================================================
 # التشغيل
 # ================================================================
