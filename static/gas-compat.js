@@ -3,7 +3,7 @@
     var _s=null,_f=null;
     function go(m,u,b){
         var sf=_s,ff=_f;_s=null;_f=null;
-        var o={method:m,headers:{}};
+        var o={method:m,headers:{},signal:AbortSignal.timeout(60000)};
         if(b!==undefined&&b!==null){o.headers['Content-Type']='application/json';o.body=JSON.stringify(b)}
         fetch(u,o).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json()}).then(function(d){if(sf)sf(d)}).catch(function(e){console.error('ERR:',u,e);if(ff)ff({message:e.message})})
     }
