@@ -337,11 +337,11 @@ function renderLinks(){
     // ============================================================
     // ===== تحميل وعرض البيانات =====
     // ============================================================
-    function loadData(){
-    tst('جاري سحب البيانات من الشيت — انتظر...','inf');
+function loadData(){
+    tst('جاري سحب البيانات...','inf');
     google.script.run
         .withSuccessHandler(function(r){
-            if(typeof r==='string'){try{r=JSON.parse(r)}catch(e){}}
+            if(typeof r=='string'){try{r=JSON.parse(r)}catch(e){}}
             if(r&&r.ok&&r.d){
                 D.reps=r.d.r||[];
                 D.advances=r.d.a||[];
@@ -351,18 +351,17 @@ function renderLinks(){
                 D.advRequests=r.d.q||[];
                 D.suppliers=r.d.sup||[];
                 D.companies=r.d.comp||[];
-                try{renderAll()}catch(e){console.error('renderAll error:',e)}
+                try{renderAll()}catch(e){console.error(e)}
                 tst('تم تحميل البيانات','ok');
             }else{
-                tsto('فشل تحميل البيانات','er');
+                tst('فشل التحميل','er');
             }
         })
         .withFailureHandler(function(e){
-            tsto('خطأ في التحميل: '+e.message,'er');
+            tst('خطأ: '+e.message,'er');
         })
         .srvGetData();
 }
-
     function pullFromCloud(){
         if(MANUAL_ENTRY_ACTIVE){ tst('انتظر انتهاء الإدخال اليدوي','er'); return; }
         var btn = $('pullBtn'); if(!btn) return;
