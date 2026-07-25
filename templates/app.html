@@ -303,12 +303,6 @@
         })
         .srvAuthenticate(user,pass);
 }
-        .withFailureHandler(function(e){
-            tst('خطأ: '+e.message,'er');
-            if(btn){btn.disabled=false;btn.textContent='تسجيل الدخول'}
-        })
-        .srvAuthenticate(user,pass);
-}
 
     function doLogout(){ USER=null; $('loginPage').style.display='block'; $('mainApp').style.display='none'; $('lPass').value=''; }
 function copyLink(txt){
