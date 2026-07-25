@@ -295,7 +295,35 @@
     }
 
     function doLogout(){ USER=null; $('loginPage').style.display='block'; $('mainApp').style.display='none'; $('lPass').value=''; }
-
+function copyLink(txt){
+    if(navigator.clipboard){
+        navigator.clipboard.writeText(txt).then(function(){tsto('تم النسخ ✓','ok')}).catch(function(){fallCopy(txt)});
+    }else{fallCopy(txt)}
+}
+function fallCopy(txt){
+    var ta=document.createElement('textarea');ta.value=txt;ta.style.cssText='position:fixed;left:-9999px';
+    document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);
+    tsto('تم النسخ ✓','ok');
+}
+function renderLinks(){
+    var base=window.location.href.split('?')[0];
+    var links=[
+        {icon:'🏠',label:'الرئيسية',url:base},
+        {icon:'🖥️',label:'لوحة التحكم',url:base+'?page=admin'},
+        {icon:'👤',label:'صفحة المندوب',url:base+'?page=rep'},
+        {icon:'📊',label:'التقارير المالية',url:base+'?page=report'},
+        {icon:'💰',label:'تقرير العهد',url:base+'?page=report2'}
+    ];
+    var h='';
+    links.forEach(function(l){
+        h+='<div class="copy-link" onclick="copyLink(\''+l.url+'\')">';
+        h+='<b style="color:#f59e0b;min-width:20px">'+l.icon+'</b>';
+        h+='<span>'+l.url+'</span>';
+        h+='<button class="cb" onclick="event.stopPropagation();copyLink(\''+l.url+'\')">نسخ</button>';
+        h+='</div>';
+    });
+    return h;
+}
     // ============================================================
     // ===== تحميل وعرض البيانات =====
     // ============================================================
