@@ -283,15 +283,22 @@
             if(typeof r==='string'){try{r=JSON.parse(r)}catch(e){}}
             if(r&&r.ok&&r.user){
                 CUR_USER=r.user;
+                if($('curUserName'))$('curUserName').textContent=CUR_USER.name;
+                tst('مرحباً '+CUR_USER.name+' — جاري تحميل البيانات...','ok');
                 $('loginPage').style.display='none';
                 $('mainPage').style.display='block';
-                if($('curUserName'))$('curUserName').textContent=CUR_USER.name;
-                loadData();
+                setTimeout(function(){loadData()},500);
             }else{
                 tst(r&&r.err?r.err:'بيانات غير صحيحة','er');
                 if(btn){btn.disabled=false;btn.textContent='تسجيل الدخول'}
             }
         })
+        .withFailureHandler(function(e){
+            tst('خطأ: '+e.message,'er');
+            if(btn){btn.disabled=false;btn.textContent='تسجيل الدخول'}
+        })
+        .srvAuthenticate(user,pass);
+}
         .withFailureHandler(function(e){
             tst('خطأ: '+e.message,'er');
             if(btn){btn.disabled=false;btn.textContent='تسجيل الدخول'}
