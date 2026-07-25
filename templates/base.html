@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+
+<div class="sidebar">
+    <div class="sidebar-brand">
+        <h2>بستان العجوة</h2>
+        <p>لوحة التحكم</p>
+    </div>
+
+    <div class="sidebar-menu">
+        <button class="menu-item" onclick="location.href='/'">🏠 الرئيسية</button>
+        <button class="menu-item" onclick="location.href='/app'">📄 رفع فاتورة</button>
+        <button class="menu-item" onclick="location.href='/rep'">📊 التقارير</button>
+        <button class="menu-item" onclick="location.href='/report'">📁 تقرير 1</button>
+        <button class="menu-item" onclick="location.href='/report2'">📁 تقرير 2</button>
+    </div>
+</div>
+
+<div class="main-area">
+    <div class="top-bar">
+        <div class="top-bar-right">
+            <span class="page-title">{{ title }}</span>
+        </div>
+    </div>
+
+    <div class="page-content">
+        {% block content %}{% endblock %}
+    </div>
+</div>
+
+</body>
+</html>
