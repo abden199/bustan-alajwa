@@ -208,6 +208,10 @@
     </div>
 
     <script src="/static/gas-compat.js"></script>
+    function addslashes(str){
+    if(str===null||str===undefined)return '';
+    return String(str).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'\\"').replace(/\0/g,'\\0');
+}
     <script>
 
     var CSOPTS = [
