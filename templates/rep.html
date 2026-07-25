@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>صفحة المندوب - بستان العجوة</title>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:'Tajawal',sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh;min-height:100dvh}
+        .wrap{max-width:500px;margin:0 auto;padding:12px;padding-bottom:80px}
+        .hdr{background:linear-gradient(135deg,#10b981,#059669);border-radius:14px;padding:16px;margin-bottom:12px;text-align:center}
+        .hdr h1{font-size:18px;font-weight:900;color:#fff}
+        .hdr p{font-size:11px;color:rgba(255,255,255,.6)}
+        .login-box{background:#1e293b;border:1px solid #334155;border-radius:14px;padding:20px;text-align:center}
+        .login-box h2{font-size:18px;font-weight:700;margin-bottom:16px;color:#e2e8f0}
+        .lb{display:block;text-align:right;font-size:12px;color:#94a3b8;margin-bottom:4px;font-weight:600}
+        .fi{width:100%;padding:12px;background:#f1f5f9;border:2px solid #cbd5e1;border-radius:10px;color:#1e293b;font-size:14px;font-weight:600;font-family:'Tajawal',sans-serif;outline:none;margin-bottom:12px}
+        .fi:focus{border-color:#10b981}
+        .btn{width:100%;padding:14px;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;font-family:'Tajawal',sans-serif;transition:.2s}
+        .btn-p{background:linear-gradient(135deg,#10b981,#059669);color:#fff}
+        .btn-g{background:#10b981;color:#fff}
+        .btn-o{background:#f97316;color:#fff}
+        .btn-r{background:#ef4444;color:#fff}
+        .btn-sm{width:auto;padding:8px 14px;font-size:12px}
+        .btn:disabled{opacity:.5;cursor:not-allowed}
+        .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+        .sbox{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:12px;text-align:center}
+        .sbox .sl{font-size:10px;color:#94a3b8}
+        .sbox .sv{font-size:18px;font-weight:900}
+        .sv.gold{color:#f59e0b}.sv.red{color:#ef4444}.sv.green{color:#10b981}
+        .card{background:#1e293b;border:1px solid #334155;border-radius:14px;overflow:hidden;margin-bottom:12px}
+        .card-h{padding:12px 14px;border-bottom:1px solid #334155;display:flex;justify-content:space-between;align-items:center}
+        .card-h h3{font-size:14px;font-weight:700;color:#e2e8f0}
+        .card-b{padding:14px}
+        .inv-item{background:#0f172a;border:1px solid #334155;border-radius:10px;padding:10px;margin-bottom:8px}
+        .inv-item .top{display:flex;justify-content:space-between}
+        .inv-item .top .id{color:#10b981;font-weight:700}
+        .inv-item .top .amt{font-weight:900}
+        .inv-item .desc{padding:4px 8px;background:rgba(16,185,129,.06);border-radius:6px;border-right:3px solid #10b981;margin:4px 0;font-size:12px}
+        .inv-item .bot{display:flex;gap:6px;flex-wrap:wrap;font-size:10px;color:#94a3b8}
+        .adv-item{background:#0f172a;border:1px solid #334155;border-radius:10px;padding:12px;margin-bottom:8px}
+        .adv-item .at{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+        .adv-item .at .aid{color:#10b981;font-weight:700;font-size:14px}
+        .adv-item .at .status{font-size:10px;padding:3px 8px;border-radius:6px;font-weight:700}
+        .st-open{background:rgba(59,130,246,.15);color:#60a5fa}
+        .st-settled{background:rgba(16,185,129,.15);color:#34d399}
+        .st-pending{background:rgba(245,158,11,.15);color:#fbbf24}
+        .adv-row{display:flex;justify-content:space-between;font-size:12px;color:#94a3b8;margin-bottom:4px}
+        .adv-row b{color:#e2e8f0}
+        .adv-bar{height:6px;background:#334155;border-radius:3px;overflow:hidden;margin-top:8px}
+        .adv-bar-inner{height:100%;border-radius:3px;transition:width .3s}
+        .req-card{background:rgba(245,158,11,.05);border:1px solid rgba(245,158,11,.3);border-radius:10px;padding:12px;margin-bottom:8px}
+        .req-card .rc-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+        .tbox{position:fixed;top:12px;left:12px;right:12px;z-index:99999;display:flex;flex-direction:column;gap:6px;pointer-events:none}
+        .tst{background:#1e293b;border:1px solid #334155;border-radius:10px;padding:12px;display:flex;align-items:center;gap:8px;box-shadow:0 4px 20px rgba(0,0,0,.5);animation:tsI .3s ease;font-size:13px;pointer-events:auto}
+        .tst.ok{border-right:4px solid #10b981}.tst.er{border-right:4px solid #ef4444}.tst.inf{border-right:4px solid #3b82f6}
+        @keyframes tsI{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+        .bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#1e293b;border-top:1px solid #334155;display:flex;z-index:100}
+        .bnav{flex:1;padding:10px 4px;text-align:center;font-size:10px;color:#64748b;border:none;background:none;cursor:pointer;font-family:'Tajawal',sans-serif}
+        .bnav.on{color:#10b981;border-top:2px solid #10b981}
+        .bnav span{display:block;font-size:18px}
+        .page{display:none}.page.on{display:block}
+        .warn{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:8px 10px;font-size:11px;color:#f87171;margin-top:6px;display:none}
+        .empty{text-align:center;padding:30px;color:#64748b;font-size:13px}
+        .cc-section{background:#0f172a;border:1px solid #334155;border-radius:10px;padding:12px;margin-bottom:10px}
+        .cc-row{background:#1e293b;border:1px solid #334155;border-radius:8px;padding:10px;margin-bottom:8px}
+        .cc-row-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+        .cc-total-bar{background:#1e293b;border:1px solid #334155;border-radius:8px;padding:10px;margin-top:10px}
+        .cc-total-row{display:flex;justify-content:space-between;font-size:12px;color:#94a3b8}
+        .cc-total-row b{color:#e2e8f0}
+        .cc-bar{height:6px;background:#334155;border-radius:3px;overflow:hidden;margin-top:6px}
+        .cc-bar-inner{height:100%;border-radius:3px;transition:width .3s}
+        .cc-ok{color:#34d399;font-weight:700;font-size:12px;text-align:center;margin-top:8px}
+        .cc-err{color:#f87171;font-weight:700;font-size:12px;text-align:center;margin-top:8px}
+        .row{display:flex;gap:8px}.row .fg{flex:1}
+        .fg{margin-bottom:10px}
+        .fg label{display:block;font-size:11px;color:#94a3b8;margin-bottom:4px;font-weight:600}
+        select.fi{appearance:none}
+        @media(max-width:380px){.stats{grid-template-columns:1fr 1fr}.sbox:nth-child(3){grid-column:span 2}}
+    </style>
+</head>
+<body>
+    <div class="tbox" id="toasts"></div>
+    <div class="wrap">
+        <div class="hdr">
+            <h1>📦 تسجيل مشتريات المندوب</h1>
+            <p>بستان العجوة — Bustan Alajwa</p>
+        </div>
+
+        <!-- صفحة الدخول -->
+        <div id="loginPage" class="login-box">
+            <h2>👤 تسجيل الدخول</h2>
+            <label class="lb">المندوب</label>
+            <select class="fi" id="loginRep"><option value="">اختر اسمك</option></select>
+            <label class="lb">رمز PIN</label>
+            <input class="fi" id="loginPin" type="password" maxlength="4" placeholder="****" inputmode="numeric">
+            <button class="btn btn-p" onclick="doLogin()">🔓 دخول</button>
+        </div>
+
+        <!-- الصفحة الرئيسية -->
+        <div id="mainPage" style="display:none">
+            <div class="stats">
+                <div class="sbox"><div class="sl">إجمالي العهد</div><div class="sv gold" id="sTotal">0.00</div></div>
+                <div class="sbox"><div class="sl">المصروف</div><div class="sv red" id="sSpent">0.00</div></div>
+                <div class="sbox"><div class="sl">المتبقي</div><div class="sv green" id="sRem">0.00</div></div>
+            </div>
+
+            <!-- تبويب: فاتورة جديدة -->
+            <div id="pNew" class="page on">
+                <div class="card">
+                    <div class="card-h"><h3>💰 اختر العهدة</h3></div>
+                    <div class="card-b"><select class="fi" id="nAdv" onchange="selAdv()"><option value="">-- اختر العهدة --</option></select></div>
+                </div>
+                <div id="invForm" style="display:none">
+                    <div class="card">
+                        <div class="card-h"><h3>🧾 فاتورة جديدة</h3></div>
+                        <div class="card-b">
+                            <div class="fg"><label>نوع الفاتورة</label><select class="fi" id="nType" onchange="calcTax()"><option>فاتورة ضريبية</option><option>فاتورة عادية</option><option>سند قبض</option><option>إيصال</option></select></div>
+                            <div class="fg"><label>رقم الفاتورة</label><input class="fi" id="nInvNo" placeholder="رقم الفاتورة"></div>
+                            <div class="row">
+                                <div class="fg"><label>الإجمالي</label><input class="fi" id="nAmt" type="number" step="0.01" placeholder="0.00" oninput="calcTax();calcCC()"></div>
+                                <div class="fg"><label>الضريبة</label><input class="fi" id="nTax" type="number" step="0.01" readonly style="background:#e2e8f0"></div>
+                            </div>
+                            <div class="row">
+                                <div class="fg"><label>خاضع الضريبة</label><input class="fi" id="nTaxable" type="number" step="0.01" readonly style="background:#e2e8f0"></div>
+                                <div class="fg"><label>التاريخ</label><input class="fi" id="nDate" type="date"></div>
+                            </div>
+
+                            <div class="cc-section">
+                                <div class="cc-row-header"><span style="font-weight:700;font-size:13px">🏢 مراكز التكلفة</span><button class="btn btn-sm btn-g" onclick="addCCRow()">➕ إضافة</button></div>
+                                <div id="ccRows"></div>
+                                <div class="cc-total-bar">
+                                    <div class="cc-total-row"><span>إجمالي الفاتورة</span><b id="ccInvTotal">0.00</b></div>
+                                    <div class="cc-total-row"><span>تم توزيعه</span><b id="ccDistributed">0.00</b></div>
+                                    <div class="cc-total-row"><span>المتبقي</span><b id="ccRemaining" style="color:#f59e0b">0.00</b></div>
+                                    <div class="cc-bar"><div class="cc-bar-inner" id="ccBar" style="width:0%;background:#10b981"></div></div>
+                                    <div id="ccStatus"></div>
+                                </div>
+                            </div>
+
+                            <div class="fg"><label>البيان</label><input class="fi" id="nDesc" placeholder="وصف الفاتورة"></div>
+                            <div class="fg"><label>ملاحظات</label><input class="fi" id="nNotes" placeholder="ملاحظات إضافية"></div>
+                            <div class="warn" id="advWarn">⚠️ المبلغ أكبر من المتبقي في العهدة!</div>
+                            <button class="btn btn-g" id="saveBtn" onclick="saveInv()">💾 حفظ الفاتورة</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- تبويب: السجل مع فلتر العهدة -->
+            <div id="pHistory" class="page">
+                <div class="card">
+                    <div class="card-h"><h3>📋 سجل الفواتير</h3><span id="invCnt" style="font-size:11px;color:#94a3b8"></span></div>
+                    <div class="card-b">
+                        <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
+                            <select class="fi" id="histAdvFilter" onchange="filterInv()" style="flex:1;min-width:140px;margin-bottom:0">
+                                <option value="">-- جميع العهود --</option>
+                            </select>
+                            <input class="fi" id="searchInv" placeholder="🔍 بحث..." oninput="filterInv()" style="flex:1;min-width:140px;margin-bottom:0">
+                        </div>
+                        <div id="invList"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- تبويب: العهد -->
+            <div id="pAdvs" class="page">
+                <div class="card">
+                    <div class="card-h"><h3>💰 عهودي</h3></div>
+                    <div class="card-b" id="advsList"></div>
+                </div>
+            </div>
+
+            <!-- تبويب: طلب عهدة -->
+            <div id="pRequest" class="page">
+                <div class="card">
+                    <div class="card-h"><h3>📋 طلب عهدة جديدة</h3></div>
+                    <div class="card-b">
+                        <div class="fg"><label>المبلغ المطلوب</label><input class="fi" id="reqAmt" type="number" step="0.01" placeholder="0.00"></div>
+                        <div class="fg"><label>الغرض</label><input class="fi" id="reqPurpose" placeholder="سبب طلب العهدة"></div>
+                        <div class="fg"><label>ملاحظات</label><input class="fi" id="reqNotes" placeholder="ملاحظات إضافية"></div>
+                        <button class="btn btn-o" id="reqBtn" onclick="submitAdvRequest()">📤 إرسال الطلب</button>
+                    </div>
+                </div>
+                <div class="card" style="margin-top:12px">
+                    <div class="card-h"><h3>📊 طلباتي السابقة</h3></div>
+                    <div class="card-b" id="myRequests"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- شريط التنقل السفلي -->
+        <div class="bottom-nav" id="bnav" style="display:none">
+            <button class="bnav on" onclick="showPage('pNew',this)"><span>🧾</span>فاتورة</button>
+            <button class="bnav" onclick="showPage('pHistory',this)"><span>📋</span>سجل</button>
+            <button class="bnav" onclick="showPage('pAdvs',this)"><span>💰</span>عهدي</button>
+            <button class="bnav" onclick="showPage('pRequest',this)"><span>📝</span>طلب</button>
+            <button class="bnav" onclick="doLogout()"><span>🚪</span>خروج</button>
+        </div>
+    </div>
+
+    <script src="/static/gas-compat.js"></script>
+    <script>
+
+    var CSOPTS = [
+        {g:'🌾 المزارع',v:['مزرعة عرعر','مزرعة الاكحل','مزرعة الاكحل شراكة','مزرعة الابل','مزرعة الغنم','مزرعة أبو طارق','مزرعة أبو عزام ضعا','مزرعة الاكحل الاستثمارية','مزرعة شجوى الشريف','مزرعة السليلة','مزرعة القفيف نخل','مزرعة القفيف خضار','مزرعة البحرة','مزرعة شجوى ابوبندر ابوفهد','مزرعة الكتيفة','مزرعة الاكحل عماد اللهيبي','مزرعة الثنيان']},
+        {g:'🏠 خاص',v:['أبو عزام خاص','أبو عامر الغنم - خاص','الديرة ابوبندر - خاص','الديرة أبو فهد - خاص','ابو عامر خاص','ابو عبدلله خاص']},
+        {g:'🏢 المرافق',v:['سكن الععمال','معمل البستان','سكن البستان','بستان العجوة','المحمية','المكتب','الصيانة','البوابة','المنتزه']},
+        {g:'🛒 الأنشطة التجارية',v:['خردوات كتابة','خردوات محل','خردوات العاب','كشك البليله','كشك شاي الجمر','كشك البطاطس','الكوفي','المطعم','المعرض','المعارض والمؤتمرات','المستودع','الايسكريم','الألعاب']},
+        {g:'📋 أخرى',v:['أخرى']}
+    ];
+
+    var D = {reps:[], advances:[], purchases:[], advRequests:[]};
+    var CUR = null;
+    var CC_COUNT = 0;
+
+    // ============================================================
+    // ===== دوال مساعدة =====
+    // ============================================================
+    function $(id){ return document.getElementById(id); }
+    function f(n){ return Number(n||0).toLocaleString('en',{minimumFractionDigits:2, maximumFractionDigits:2}); }
+    function fd(d){ if(!d) return '-'; var s=String(d).split('T')[0]; var p=s.split('-'); return p.length===3?p[2]+'/'+p[1]+'/'+p[0].slice(2):s; }
+    function tst(m,t){ t=t||'ok'; var ic={ok:'✓',er:'✗',inf:'ℹ'}; var e=document.createElement('div'); e.className='tst '+t; e.innerHTML='<b>'+ic[t]+'</b> <span>'+m+'</span>'; $('toasts').appendChild(e); setTimeout(function(){e.remove();},3000); }
+
+    // دالة اتصال (تدعم عدة معاملات)
+    function srv(fn){
+        var args = Array.prototype.slice.call(arguments, 1);
+        return new Promise(function(ok, no){
+            google.script.run
+                .withSuccessHandler(function(res){
+                    try{ if(typeof res==='string') res=JSON.parse(res); } catch(e){}
+                    ok(res);
+                })
+                .withFailureHandler(function(e){ no(e); })
+                [fn].apply(null, args);
+        });
+    }
+
+    // بناء خيارات مراكز التكلفة (متطابقة مع app.html)
+    function buildCCOpts(sel){
+        var h = '<option value="">اختر مركز</option>';
+        CSOPTS.forEach(function(g){
+            h += '<optgroup label="'+g.g+'">';
+            g.v.forEach(function(c){
+                h += '<option'+(sel&&sel===c?' selected':'')+'>'+c+'</option>';
+            });
+            h += '</optgroup>';
+        });
+        return h;
+    }
+
+    // ============================================================
+    // ===== تحميل البيانات =====
+    // ============================================================
+    function loadData(){
+        srv('srvGetData').then(function(res){
+            if(res && res.ok && res.d){
+                D.reps = res.d.r || [];
+                D.advances = res.d.a || [];
+                D.purchases = res.d.p || [];
+                D.advRequests = res.d.q || [];
+                try{ localStorage.setItem('repData', JSON.stringify(D)); } catch(e){}
+                buildLogin();
+                if(CUR) buildMain();
+                tst('تم تحديث البيانات','ok');
+            }
+        }).catch(function(){
+            try{
+                var saved = localStorage.getItem('repData');
+                if(saved){ D = JSON.parse(saved); }
+            } catch(e){}
+            buildLogin();
+            if(CUR) buildMain();
+            tst('بيانات محلية','inf');
+        });
+    }
+
+    function buildLogin(){
+        var o = '<option value="">اختر اسمك</option>';
+        D.reps.forEach(function(r){
+            if(r.active===true || r.active==='true') o += '<option value="'+r.id+'">'+r.name+'</option>';
+        });
+        $('loginRep').innerHTML = o;
+    }
+
+    // ============================================================
+    // ===== تسجيل الدخول والخروج =====
+    // ============================================================
+    function doLogin(){
+        var rid = Number($('loginRep').value);
+        var pin = $('loginPin').value.trim();
+        if(!rid || !pin){ alert('اختر المندوب وأدخل PIN'); return; }
+        var rep = null;
+        D.reps.forEach(function(r){ if(Number(r.id)===rid) rep=r; });
+        if(!rep){ alert('المندوب غير موجود'); return; }
+        if(String(rep.pin).trim() !== pin){ alert('رمز PIN خاطئ'); return; }
+        CUR = {id:Number(rep.id), name:rep.name};
+        $('loginPage').style.display = 'none';
+        $('mainPage').style.display = 'block';
+        $('bnav').style.display = 'flex';
+        buildMain();
+        tst('مرحباً '+CUR.name,'ok');
+    }
+
+    function doLogout(){
+        CUR = null;
+        $('loginPage').style.display = 'block';
+        $('mainPage').style.display = 'none';
+        $('bnav').style.display = 'none';
+        $('loginPin').value = '';
+    }
+
+    // ============================================================
+    // ===== البناء الرئيسي =====
+    // ============================================================
+    function buildMain(){
+        // حساب الإحصائيات
+        var ta = 0, ts = 0;
+        D.advances.forEach(function(a){
+            if(Number(a.repId)===CUR.id) ta += Number(a.amount);
+        });
+        D.purchases.forEach(function(p){
+            D.advances.forEach(function(a){
+                if(Number(a.repId)===CUR.id && Number(p.advId)===Number(a.id)) ts += Number(p.amount);
+            });
+        });
+        $('sTotal').textContent = f(ta);
+        $('sSpent').textContent = f(ts);
+        $('sRem').textContent = f(ta - ts);
+        $('sRem').style.color = (ta-ts) >= 0 ? '#10b981' : '#ef4444';
+
+        // بناء قائمة العهد المتاحة
+        var o = '<option value="">-- اختر العهدة --</option>';
+        D.advances.forEach(function(a){
+            if(Number(a.repId)===CUR.id && (a.status==='open' || a.status==='pending')){
+                var sp = 0;
+                D.purchases.forEach(function(p){ if(Number(p.advId)===Number(a.id)) sp += Number(p.amount); });
+                var rm = Number(a.amount) - sp;
+                o += '<option value="'+a.id+'">#'+a.id+' — '+(a.purpose||'عهدة')+' | المتبقي: '+f(rm)+' ر.س</option>';
+            }
+        });
+        $('nAdv').innerHTML = o;
+        $('nDate').value = new Date().toISOString().split('T')[0];
+
+        // إعادة تعيين نموذج الفاتورة
+        CC_COUNT = 0;
+        $('ccRows').innerHTML = '';
+        addCCRow();
+        $('invForm').style.display = 'none';
+
+        buildHistory();
+        buildAdvs();
+        buildMyRequests();
+    }
+
+    // ============================================================
+    // ===== اختيار العهدة وحساب الضريبة =====
+    // ============================================================
+    function selAdv(){
+        $('invForm').style.display = $('nAdv').value ? 'block' : 'none';
+        calcTax();
+        calcCC();
+    }
+
+    function calcTax(){
+        var amt = Number($('nAmt').value) || 0;
+        var type = $('nType').value;
+        if(type === 'فاتورة ضريبية'){
+            var taxable = amt / 1.15;
+            var tax = amt - taxable;
+            $('nTax').value = tax.toFixed(2);
+            $('nTaxable').value = taxable.toFixed(2);
+        } else {
+            $('nTax').value = '0.00';
+            $('nTaxable').value = '0.00';
+        }
+        // تحذير تجاوز العهدة
+        var advId = Number($('nAdv').value);
+        var sp = 0;
+        D.purchases.forEach(function(p){ if(Number(p.advId)===advId) sp += Number(p.amount); });
+        var adv = null;
+        D.advances.forEach(function(a){ if(Number(a.id)===advId) adv=a; });
+        var rem = adv ? Number(adv.amount) - sp : 0;
+        $('advWarn').style.display = (amt > rem) ? 'block' : 'none';
+    }
+
+    // ============================================================
+    // ===== مراكز التكلفة =====
+    // ============================================================
+    function addCCRow(){
+        CC_COUNT++;
+        var n = CC_COUNT;
+        var div = document.createElement('div');
+        div.className = 'cc-row';
+        div.id = 'ccRow'+n;
+        div.innerHTML =
+            '<div class="cc-row-header"><span style="font-size:12px;font-weight:700">🏢 مركز #'+n+'</span>' +
+            '<button class="btn btn-sm btn-r" style="width:auto;padding:4px 10px;font-size:11px" onclick="removeCCRow('+n+')">✕ حذف</button></div>' +
+            '<div class="row"><div class="fg"><select class="fi" id="ccSel'+n+'">'+buildCCOpts()+'</select></div>' +
+            '<div class="fg"><input class="fi" id="ccAmt'+n+'" type="number" step="0.01" placeholder="المبلغ" oninput="calcCC()"></div></div>' +
+            '<div class="fg"><input class="fi" id="ccDesc'+n+'" placeholder="بيان المركز"></div>';
+        $('ccRows').appendChild(div);
+        calcCC();
+    }
+
+    function removeCCRow(n){
+        var el = $('ccRow'+n);
+        if(el) el.remove();
+        calcCC();
+    }
+
+    function calcCC(){
+        var invTotal = Number($('nAmt').value) || 0;
+        var distributed = 0;
+        document.querySelectorAll('.cc-row').forEach(function(r){
+            var inp = r.querySelector('input[type="number"]');
+            if(inp) distributed += Number(inp.value) || 0;
+        });
+        var remaining = invTotal - distributed;
+        var pct = invTotal > 0 ? Math.min(Math.round((distributed / invTotal) * 100), 100) : 0;
+
+        $('ccInvTotal').textContent = f(invTotal);
+        $('ccDistributed').textContent = f(distributed);
+        $('ccRemaining').textContent = f(remaining);
+        $('ccRemaining').style.color = remaining < -0.01 ? '#ef4444' : (remaining > 0.01 ? '#f59e0b' : '#34d399');
+
+        var bar = $('ccBar');
+        bar.style.width = pct + '%';
+
+        var status = $('ccStatus');
+        var rows = document.querySelectorAll('.cc-row');
+        if(!rows.length){
+            status.innerHTML = '<div class="cc-err">⚠️ أضف مركز تكلفة</div>';
+            bar.style.background = '#ef4444';
+        } else if(remaining > 0.01){
+            status.innerHTML = '<div class="cc-err">⚠️ لم يتم توزيع '+f(remaining)+'</div>';
+            bar.style.background = '#f59e0b';
+        } else if(remaining < -0.01){
+            status.innerHTML = '<div class="cc-err">❌ تجاوزت الإجمالي بـ '+f(Math.abs(remaining))+'</div>';
+            bar.style.background = '#ef4444';
+        } else {
+            status.innerHTML = '<div class="cc-ok">✅ تم التوزيع بالكامل</div>';
+            bar.style.background = '#10b981';
+        }
+    }
+
+    function getCCData(){
+        var data = [];
+        document.querySelectorAll('.cc-row').forEach(function(r){
+            var n = r.id.replace('ccRow','');
+            var cc = $('ccSel'+n) ? $('ccSel'+n).value : '';
+            var amt = $('ccAmt'+n) ? Number($('ccAmt'+n).value)||0 : 0;
+            var desc = $('ccDesc'+n) ? $('ccDesc'+n).value.trim() : '';
+            if(cc && amt > 0) data.push({costCenter:cc, amount:amt, desc:desc});
+        });
+        return data;
+    }
+
+    // ============================================================
+    // ===== حفظ الفاتورة =====
+    // ============================================================
+    function saveInv(){
+        var advId = Number($('nAdv').value);
+        var amt = Number($('nAmt').value);
+        if(!advId || !amt){ alert('اختر العهدة وأدخل المبلغ'); return; }
+
+        var ccData = getCCData();
+        if(!ccData.length){ alert('أضف مركز تكلفة واحد على الأقل'); return; }
+
+        var distributed = 0;
+        ccData.forEach(function(c){ distributed += c.amount; });
+        if(Math.abs(amt - distributed) > 0.01){ alert('المبلغ الموزع ('+f(distributed)+') لا يساوي الإجمالي ('+f(amt)+')'); return; }
+
+        if($('advWarn').style.display === 'block'){
+            if(!confirm('المبلغ يتجاوز المتبقي في العهدة. متابعة؟')) return;
+        }
+
+        var saveBtn = $('saveBtn');
+        saveBtn.disabled = true;
+        saveBtn.textContent = '⏳ جاري الحفظ...';
+
+        // إذا كان هناك عدة مراكز تكلفة، نحفظ الأولى كرئيسية
+        var mainCC = ccData[0].costCenter;
+        var notes = $('nNotes').value || '';
+        if(ccData.length > 1){
+            var ccNotes = 'توزيع مراكز التكلفة: ';
+            ccData.forEach(function(c,i){
+                ccNotes += c.costCenter+'='+f(c.amount);
+                if(c.desc) ccNotes += '('+c.desc+')';
+                if(i < ccData.length-1) ccNotes += ' | ';
+            });
+            notes = notes ? notes + ' — ' + ccNotes : ccNotes;
+        }
+
+        var data = {
+            advId: advId,
+            amount: amt,
+            taxableAmount: Number($('nTaxable').value) || 0,
+            taxAmount: Number($('nTax').value) || 0,
+            invoiceType: $('nType').value,
+            invoiceNo: $('nInvNo').value || '',
+            costCenter: mainCC,
+            desc: $('nDesc').value || ccData[0].desc || '',
+            date: $('nDate').value,
+            notes: notes
+        };
+
+        srv('srvAddPurchase', data).then(function(res){
+            if(res && res.success){
+                D.purchases.push(Object.assign({id:res.id}, data));
+                try{ localStorage.setItem('repData', JSON.stringify(D)); } catch(e){}
+                tst('تم حفظ الفاتورة #'+res.id,'ok');
+
+                // إعادة تعيين النموذج
+                $('nAmt').value = '';
+                $('nTax').value = '';
+                $('nTaxable').value = '';
+                $('nInvNo').value = '';
+                $('nDesc').value = '';
+                $('nNotes').value = '';
+                $('advWarn').style.display = 'none';
+                CC_COUNT = 0;
+                $('ccRows').innerHTML = '';
+                addCCRow();
+
+                buildMain();
+            } else {
+                tst('فشل الحفظ: '+(res && res.err ? res.err : 'خطأ غير معروف'),'er');
+            }
+            saveBtn.disabled = false;
+            saveBtn.textContent = '💾 حفظ الفاتورة';
+        }).catch(function(e){
+            // حفظ محلي عند فشل الاتصال
+            var localId = Date.now();
+            data.id = localId;
+            data._pending = true;
+            D.purchases.push(data);
+            try{ localStorage.setItem('repData', JSON.stringify(D)); } catch(ex){}
+            tst('حفظ محلي — سيرفع عند الاتصال','inf');
+            buildMain();
+            saveBtn.disabled = false;
+            saveBtn.textContent = '💾 حفظ الفاتورة';
+        });
+    }
+
+    // ============================================================
+    // ===== سجل الفواتير (مع فلتر العهدة) =====
+    // ============================================================
+    function buildHistory(){
+        // بناء قائمة العهد في الفلتر
+        var advOpts = '<option value="">-- جميع العهود --</option>';
+        var myAdvIds = [];
+        D.advances.forEach(function(a){
+            if(Number(a.repId) === CUR.id){
+                myAdvIds.push(Number(a.id));
+                var sp = 0;
+                D.purchases.forEach(function(p){ if(Number(p.advId)===Number(a.id)) sp+=Number(p.amount); });
+                advOpts += '<option value="'+a.id+'">#'+a.id+' — '+(a.purpose||'عهدة')+' | '+f(sp)+' مصروف</option>';
+            }
+        });
+        var filterEl = $('histAdvFilter');
+        if(filterEl) filterEl.innerHTML = advOpts;
+
+        // حساب عدد الفواتير
+        var invs = D.purchases.filter(function(p){ return myAdvIds.indexOf(Number(p.advId)) > -1; });
+        var cntEl = $('invCnt');
+        if(cntEl) cntEl.textContent = invs.length + ' فاتورة';
+
+        renderInvList(invs);
+    }
+
+    function filterInv(){
+        var advId = $('histAdvFilter') ? Number($('histAdvFilter').value) || 0 : 0;
+        var q = $('searchInv') ? $('searchInv').value.trim().toLowerCase() : '';
+
+        var myAdvIds = [];
+        D.advances.forEach(function(a){ if(Number(a.repId)===CUR.id) myAdvIds.push(Number(a.id)); });
+
+        var invs = D.purchases.filter(function(p){ return myAdvIds.indexOf(Number(p.advId)) > -1; });
+
+        // فلتر العهدة
+        if(advId){
+            invs = invs.filter(function(p){ return Number(p.advId) === advId; });
+        }
+
+        // فلتر البحث
+        if(q){
+            invs = invs.filter(function(p){
+                return (p.desc||'').toLowerCase().includes(q) ||
+                       (p.invoiceNo||'').toLowerCase().includes(q) ||
+                       (p.costCenter||'').toLowerCase().includes(q) ||
+                       (p.notes||'').toLowerCase().includes(q);
+            });
+        }
+
+        var cntEl = $('invCnt');
+        if(cntEl) cntEl.textContent = invs.length + ' فاتورة';
+
+        invs.sort(function(a,b){ return Number(b.id||0) - Number(a.id||0); });
+        renderInvList(invs);
+    }
+
+    function renderInvList(invs){
+        var h = '';
+        invs.forEach(function(p){
+            var pending = p._pending ? ' <span style="color:#f59e0b;font-size:10px">⏳ معلق</span>' : '';
+            h += '<div class="inv-item">';
+            h += '<div class="top"><span class="id">#'+p.id+pending+'</span><span class="amt">'+f(p.amount)+' ر.س</span></div>';
+            if(p.desc) h += '<div class="desc">📝 '+p.desc+'</div>';
+            h += '<div class="bot">';
+            h += '<span>'+(p.invoiceType||'-')+'</span>';
+            h += '<span>رقم: '+(p.invoiceNo||'-')+'</span>';
+            h += '<span>'+fd(p.date)+'</span>';
+            if(p.costCenter) h += '<span>🏢 '+p.costCenter+'</span>';
+            // إظهار رقم العهدة
+            h += '<span style="color:#f59e0b;font-weight:700">عهدة #'+p.advId+'</span>';
+            h += '</div>';
+            if(Number(p.taxAmount) > 0){
+                h += '<div class="bot" style="margin-top:4px"><span style="color:#3b82f6">ضريبة: '+f(p.taxAmount)+'</span><span style="color:#10b981">خاضع: '+f(p.taxableAmount)+'</span></div>';
+            }
+            h += '</div>';
+        });
+        if(!invs.length) h = '<div class="empty">لا توجد فواتير</div>';
+        $('invList').innerHTML = h;
+    }
+
+    // ============================================================
+    // ===== العهد =====
+    // ============================================================
+    function buildAdvs(){
+        var h = '';
+        D.advances.forEach(function(a){
+            if(Number(a.repId) !== CUR.id) return;
+            var sp = 0;
+            D.purchases.forEach(function(p){ if(Number(p.advId)===Number(a.id)) sp += Number(p.amount); });
+            var rm = Number(a.amount) - sp;
+            var pct = Number(a.amount) > 0 ? Math.min(Math.round((sp / Number(a.amount)) * 100), 100) : 0;
+            var stClass = a.status==='open' ? 'st-open' : (a.status==='settled' ? 'st-settled' : 'st-pending');
+            var stText = a.status==='open' ? 'مفتوحة' : (a.status==='settled' ? 'مسواة' : 'بانتظار');
+            var barColor = pct > 80 ? '#ef4444' : (pct > 50 ? '#f59e0b' : '#10b981');
+
+            h += '<div class="adv-item">';
+            h += '<div class="at"><span class="aid">#'+a.id+'</span><span class="status '+stClass+'">'+stText+'</span></div>';
+            if(a.purpose) h += '<div class="adv-row"><span>الغرض</span><b>'+a.purpose+'</b></div>';
+            h += '<div class="adv-row"><span>المبلغ</span><b>'+f(a.amount)+' ر.س</b></div>';
+            h += '<div class="adv-row"><span>المصروف</span><b style="color:#ef4444">'+f(sp)+' ر.س</b></div>';
+            h += '<div class="adv-row"><span>المتبقي</span><b style="color:'+(rm<0?'#f87171':'#34d399')+'">'+f(rm)+' ر.س</b></div>';
+            h += '<div class="adv-bar"><div class="adv-bar-inner" style="width:'+pct+'%;background:'+barColor+'"></div></div>';
+            if(a.settleDate) h += '<div class="adv-row" style="margin-top:6px"><span>تسوية</span><b>'+fd(a.settleDate)+'</b></div>';
+            h += '</div>';
+        });
+        if(!h) h = '<div class="empty">لا توجد عهد</div>';
+        $('advsList').innerHTML = h;
+    }
+
+    // ============================================================
+    // ===== طلب عهدة جديدة =====
+    // ============================================================
+    function submitAdvRequest(){
+        var amt = Number($('reqAmt').value);
+        var purpose = $('reqPurpose').value.trim();
+        if(!amt || !purpose){ alert('أدخل المبلغ والغرض'); return; }
+
+        var btn = $('reqBtn');
+        btn.disabled = true;
+        btn.textContent = '⏳ جاري الإرسال...';
+
+        var data = {
+            repId: CUR.id,
+            amount: amt,
+            purpose: purpose,
+            notes: $('reqNotes').value || '',
+            status: 'pending',
+            requestDate: new Date().toISOString().split('T')[0],
+            actionDate: ''
+        };
+
+        srv('srvAddAdvRequest', data).then(function(res){
+            if(res && res.success){
+                D.advRequests.push(Object.assign({id:res.id}, data));
+                try{ localStorage.setItem('repData', JSON.stringify(D)); } catch(e){}
+                tst('تم إرسال الطلب #'+res.id,'ok');
+                $('reqAmt').value = '';
+                $('reqPurpose').value = '';
+                $('reqNotes').value = '';
+                buildMyRequests();
+            } else {
+                tst('فشل الإرسال','er');
+            }
+            btn.disabled = false;
+            btn.textContent = '📤 إرسال الطلب';
+        }).catch(function(){
+            tst('خطأ في الاتصال','er');
+            btn.disabled = false;
+            btn.textContent = '📤 إرسال الطلب';
+        });
+    }
+
+    function buildMyRequests(){
+        var myReqs = D.advRequests.filter(function(r){ return Number(r.repId)===CUR.id; });
+        myReqs.sort(function(a,b){ return Number(b.id||0) - Number(a.id||0); });
+        var h = '';
+        myReqs.forEach(function(r){
+            var stBg, stColor, stText;
+            if(r.status==='approved'){ stBg='rgba(16,185,129,.15)'; stColor='#34d399'; stText='✅ تمت الموافقة'; }
+            else if(r.status==='rejected'){ stBg='rgba(239,68,68,.15)'; stColor='#f87171'; stText='❌ مرفوض'; }
+            else { stBg='rgba(245,158,11,.15)'; stColor='#fbbf24'; stText='⏳ بانتظار'; }
+
+            h += '<div class="req-card">';
+            h += '<div class="rc-top"><span style="color:#f59e0b;font-weight:700">طلب #'+r.id+'</span>';
+            h += '<span style="background:'+stBg+';color:'+stColor+';padding:3px 8px;border-radius:6px;font-size:10px;font-weight:700">'+stText+'</span></div>';
+            h += '<div class="adv-row"><span>المبلغ</span><b>'+f(r.amount)+' ر.س</b></div>';
+            h += '<div class="adv-row"><span>الغرض</span><b>'+r.purpose+'</b></div>';
+            if(r.notes) h += '<div class="adv-row"><span>ملاحظات</span><b>'+r.notes+'</b></div>';
+            h += '<div class="adv-row"><span>التاريخ</span><b>'+fd(r.requestDate)+'</b></div>';
+            if(r.actionDate) h += '<div class="adv-row"><span>تاريخ الرد</span><b>'+fd(r.actionDate)+'</b></div>';
+            h += '</div>';
+        });
+        if(!h) h = '<div class="empty">لا توجد طلبات سابقة</div>';
+        $('myRequests').innerHTML = h;
+    }
+
+    // ============================================================
+    // ===== التنقل =====
+    // ============================================================
+    function showPage(id, el){
+        document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('on'); });
+        document.querySelectorAll('.bnav').forEach(function(b){ b.classList.remove('on'); });
+        $(id).classList.add('on');
+        if(el) el.classList.add('on');
+    }
+
+    // ============================================================
+    // ===== بدء التشغيل =====
+    // ============================================================
+    loadData();
+    </script>
+</body>
+</html>

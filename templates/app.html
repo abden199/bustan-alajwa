@@ -1,0 +1,1301 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام المشتريات — لوحة التحكم</title>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:'Tajawal',sans-serif;background:#f0fdf4;color:#1a202c;min-height:100vh;overflow-x:hidden}
+        .sidebar{position:fixed;top:0;right:0;bottom:0;width:220px;background:linear-gradient(180deg,#065f46,#059669);padding:0;z-index:1000;box-shadow:-4px 0 20px rgba(0,0,0,.15);display:flex;flex-direction:column;overflow-y:auto}
+        .sidebar-brand{padding:16px;text-align:center;border-bottom:1px solid rgba(255,255,255,.15)}
+        .sidebar-brand h2{font-size:16px;font-weight:900;color:#fff}.sidebar-brand p{font-size:10px;color:rgba(255,255,255,.6)}
+        .sidebar-menu{flex:1;padding:8px 0}
+        .sidebar-menu .menu-label{padding:6px 16px;font-size:9px;font-weight:700;color:rgba(255,255,255,.4);letter-spacing:1px}
+        .menu-item{display:flex;align-items:center;gap:10px;padding:10px 16px;font-size:12px;font-weight:600;color:rgba(255,255,255,.7);cursor:pointer;border:none;background:none;width:100%;text-align:right;font-family:'Tajawal',sans-serif;transition:.2s;border-right:3px solid transparent}
+        .menu-item:hover{background:rgba(255,255,255,.1);color:#fff}
+        .menu-item.on{background:rgba(255,255,255,.15);color:#fff;border-right-color:#a7f3d0;font-weight:700}
+        .menu-item .mi-icon{font-size:18px;min-width:24px;text-align:center}
+        .sidebar-footer{padding:12px 16px;border-top:1px solid rgba(255,255,255,.15)}
+        .sidebar-footer .user-info{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+        .sidebar-footer .user-avatar{width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:14px}
+        .sidebar-footer .user-name{font-size:12px;font-weight:700;color:#fff}
+        .sidebar-footer .user-role{font-size:9px;color:rgba(255,255,255,.5)}
+        .sidebar-footer .logout-btn{width:100%;padding:7px;border:1px solid rgba(255,255,255,.2);border-radius:6px;background:none;color:rgba(255,255,255,.7);font-size:11px;font-weight:600;cursor:pointer;font-family:'Tajawal',sans-serif;transition:.2s}
+        .sidebar-footer .logout-btn:hover{background:rgba(255,255,255,.1);color:#fff}
+        .main-area{margin-right:220px;min-height:100vh}
+        .top-bar{background:#fff;padding:10px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #e2e8f0;box-shadow:0 1px 3px rgba(0,0,0,.04);position:sticky;top:0;z-index:100}
+        .top-bar-right .page-title{font-size:16px;font-weight:800;color:#065f46}
+        .top-bar-left{display:flex;align-items:center;gap:8px}
+        .sync-btn{padding:6px 12px;border:1px solid #d1d5db;border-radius:6px;background:#fff;color:#374151;font-size:11px;font-weight:600;cursor:pointer;font-family:'Tajawal',sans-serif;transition:.2s;display:flex;align-items:center;gap:4px}
+        .sync-btn:hover{border-color:#059669;color:#059669}.sync-btn:disabled{opacity:.5;cursor:not-allowed}
+        .page-content{padding:12px 16px}
+        .page{display:none}.page.on{display:block}
+        .stats-row{display:flex;gap:6px;margin-bottom:14px;overflow-x:auto;padding-bottom:4px}
+        .stat-mini{background:#fff;border-radius:8px;padding:8px 10px;flex:1;min-width:100px;border:1px solid #e2e8f0;box-shadow:0 1px 2px rgba(0,0,0,.03);transition:transform .2s}
+        .stat-mini:hover{transform:translateY(-1px)}
+        .stat-mini .sm-row{display:flex;align-items:center;gap:6px}
+        .stat-mini .sm-icon{font-size:14px}.stat-mini .sm-val{font-size:15px;font-weight:900;color:#1e293b}
+        .stat-mini .sm-lbl{font-size:9px;color:#64748b;font-weight:600;margin-top:2px}
+        .stat-mini.c1{border-top:2px solid #059669}.stat-mini.c2{border-top:2px solid #3b82f6}
+        .stat-mini.c3{border-top:2px solid #d97706}.stat-mini.c4{border-top:2px solid #ef4444}
+        .stat-mini.c5{border-top:2px solid #0d9488}.stat-mini.c6{border-top:2px solid #8b5cf6}
+        .stat-mini.c7{border-top:2px solid #e11d48}.stat-mini.c8{border-top:2px solid #4f46e5}
+        .card{background:#fff;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+        .card-header{padding:10px 14px;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;background:#fafbfc}
+        .card-header h3{font-size:14px;font-weight:700;color:#1e293b}
+        .card-body{padding:0;overflow-x:auto}.card-body-pad{padding:12px}
+        .btn{padding:7px 14px;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:'Tajawal',sans-serif;transition:.2s;display:inline-flex;align-items:center;gap:4px}
+        .btn:active{transform:scale(.97)}.btn:disabled{opacity:.5;cursor:not-allowed}
+        .btn-primary{background:#059669;color:#fff}.btn-primary:hover{background:#047857}
+        .btn-blue{background:#3b82f6;color:#fff}.btn-green{background:#10b981;color:#fff}
+        .btn-red{background:#ef4444;color:#fff}.btn-gray{background:#e5e7eb;color:#374151}
+        .btn-orange{background:#f97316;color:#fff}.btn-amber{background:#d97706;color:#fff}
+        .btn-purple{background:#8b5cf6;color:#fff}.btn-teal{background:#0d9488;color:#fff}
+        .btn-sm{padding:5px 8px;font-size:10px}
+        table.dt{width:100%;border-collapse:collapse;font-size:11px}
+        .dt th{background:#f8fafc;padding:8px 6px;text-align:right;font-size:10px;color:#64748b;border-bottom:2px solid #e2e8f0;font-weight:700;white-space:nowrap}
+        .dt td{padding:8px 6px;border-bottom:1px solid #f1f5f9;text-align:right;color:#334155}
+        .dt tr:hover{background:#f0fdf4}
+        .dt tfoot td{background:#ecfdf5;font-weight:900;color:#059669;border-top:2px solid #059669}
+        .form-label{display:block;font-size:10px;color:#64748b;margin-bottom:3px;font-weight:600}
+        .form-input{width:100%;padding:8px 10px;background:#f8fafc;border:2px solid #e2e8f0;border-radius:6px;color:#1e293b;font-size:12px;font-weight:500;font-family:'Tajawal',sans-serif;outline:none;transition:border-color .2s;margin-bottom:8px}
+        .form-input:focus{border-color:#10b981;box-shadow:0 0 0 2px rgba(16,185,129,.1)}
+        .form-input::placeholder{color:#94a3b8;font-weight:400}
+        select.form-input{appearance:none}select.form-input option{background:#fff;color:#1e293b}select.form-input optgroup{background:#ecfdf5;color:#059669;font-weight:700}
+        .form-input[readonly]{background:#e2e8f0;border-color:#cbd5e1;color:#475569}
+        .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px}
+        .form-group{margin-bottom:6px}
+        .badge{display:inline-block;padding:2px 6px;border-radius:4px;font-size:9px;font-weight:700}
+        .badge-green{background:#dcfce7;color:#16a34a}.badge-blue{background:#dbeafe;color:#2563eb}
+        .badge-amber{background:#fef3c3;color:#b45309}.badge-red{background:#fee2e2;color:#dc2626}
+        .toast-container{position:fixed;top:12px;left:12px;right:12px;z-index:99999;display:flex;flex-direction:column;gap:6px;pointer-events:none}
+        .toast{background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:8px;box-shadow:0 4px 20px rgba(0,0,0,.1);animation:toastIn .3s ease;font-size:12px;pointer-events:auto}
+        .toast.ok{border-right:4px solid #10b981}.toast.er{border-right:4px solid #ef4444}.toast.inf{border-right:4px solid #3b82f6}
+        .toast b{font-size:14px}
+        @keyframes toastIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+        .warn-box{background:#fee2e2;border:1px solid #fca5a5;border-radius:6px;padding:8px 10px;font-size:11px;color:#dc2626;display:none}
+        .info-box{background:#eff6ff;border:1px solid #93c5fd;border-radius:6px;padding:8px 10px;font-size:11px;color:#1d4ed8}
+        .fi-tbl{padding:4px!important;margin:0!important;font-size:10px!important}
+        .req-card{border-right:3px solid #d97706;background:#fffbeb;border:1px solid #fde68a}
+        .move-box{background:#eff6ff;border:1px solid #93c5fd;border-radius:6px;padding:8px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+        .empty-state{text-align:center;padding:30px;color:#94a3b8;font-size:13px}
+        .login-wrapper{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#ecfdf5,#f0fdf4,#dcfce7)}
+        .login-card{max-width:380px;width:100%;background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:28px;box-shadow:0 4px 20px rgba(0,0,0,.08)}
+        .login-card h2{text-align:center;font-size:20px;font-weight:900;color:#059669;margin-bottom:4px}
+        .login-card p{text-align:center;font-size:11px;color:#94a3b8;margin-bottom:20px}
+        .tax-tabs{display:flex;gap:4px;margin-bottom:14px;flex-wrap:wrap;border-bottom:2px solid #e2e8f0;padding-bottom:8px}
+        .tax-tab{padding:8px 14px;border:none;border-radius:6px 6px 0 0;font-size:12px;font-weight:600;cursor:pointer;font-family:'Tajawal',sans-serif;transition:.2s;background:#f1f5f9;color:#64748b}
+        .tax-tab:hover{background:#e2e8f0}.tax-tab.on{background:#059669;color:#fff}
+        .tax-sub{display:none}.tax-sub.on{display:block}
+        .tax-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+        .tax-summary-box{background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:12px;text-align:center}
+        .tax-summary-box .tsb-val{font-size:18px;font-weight:900}
+        .tax-summary-box .tsb-lbl{font-size:10px;color:#64748b;font-weight:600;margin-top:4px}
+        .tax-summary-box.t1{border-top:3px solid #059669}.tax-summary-box.t2{border-top:3px solid #3b82f6}
+        .tax-summary-box.t3{border-top:3px solid #d97706}.tax-summary-box.t4{border-top:3px solid #ef4444}
+        .company-card{background:linear-gradient(135deg,#f0fdf4,#ecfdf5);border:1px solid #a7f3d0;border-radius:10px;padding:14px;margin-bottom:10px}
+        .compliance-item{display:flex;align-items:center;gap:10px;padding:12px;background:#fff;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:8px;transition:all .2s}
+        .compliance-item:hover{border-color:#3b82f6;box-shadow:0 2px 8px rgba(59,130,246,.1)}
+        .compliance-item .ci-icon{font-size:24px;min-width:40px;text-align:center}
+        .compliance-item .ci-info{flex:1}.compliance-item .ci-title{font-size:13px;font-weight:700;color:#1e293b}
+        .compliance-item .ci-desc{font-size:10px;color:#64748b}
+        .backup-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+        .danger-zone{border:2px solid #fca5a5;background:#fef2f2;border-radius:10px;padding:14px;margin-top:16px}
+        .danger-zone h4{color:#dc2626;margin-bottom:8px;font-size:13px}
+        @media(max-width:1024px){.sidebar{width:180px}.main-area{margin-right:180px}}
+        @media(max-width:768px){
+            .sidebar{width:100%;height:auto;position:static;flex-direction:row;flex-wrap:wrap;box-shadow:0 2px 6px rgba(0,0,0,.1)}
+            .sidebar-brand{padding:8px;width:100%;border-bottom:none}
+            .sidebar-menu{display:flex;flex-wrap:wrap;gap:2px;padding:6px;width:100%}
+            .sidebar-menu .menu-label{display:none}
+            .menu-item{padding:6px 10px;font-size:10px;border-right:none;border-bottom:2px solid transparent;flex:1;min-width:auto;justify-content:center}
+            .menu-item.on{border-right-color:transparent;border-bottom-color:#a7f3d0}
+            .menu-item .mi-text{display:none}
+            .sidebar-footer{display:none}
+            .main-area{margin-right:0}
+            .stats-row{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch}
+            .stat-mini{min-width:90px}
+            .form-grid{grid-template-columns:1fr}
+            .tax-summary{grid-template-columns:repeat(2,1fr)}
+            .tax-tabs{gap:2px}.tax-tab{padding:6px 8px;font-size:10px}
+            .backup-grid{grid-template-columns:1fr}
+        }
+        @media print{.sidebar,.top-bar,.btn,.toast-container{display:none!important}.main-area{margin:0!important}body{background:#fff!important}}
+    </style>
+</head>
+<body>
+    <div class="toast-container" id="toasts"></div>
+
+    <!-- ===== صفحة تسجيل الدخول ===== -->
+    <div id="loginPage" class="login-wrapper">
+        <div class="login-card">
+            <h2>🖥️ لوحة التحكم</h2>
+            <p>بستان العجوة — Bustan Alajwa</p>
+            <label class="form-label">اسم المستخدم</label>
+            <input class="form-input" id="lUser" placeholder="admin">
+            <label class="form-label">كلمة المرور</label>
+            <input class="form-input" id="lPass" type="password" placeholder="••••••">
+            <button class="btn btn-primary" onclick="doLogin()" style="width:100%;justify-content:center;padding:10px;font-size:14px">🔓 دخول</button>
+        </div>
+    </div>
+
+    <!-- ===== التطبيق الرئيسي ===== -->
+    <div id="mainApp" style="display:none">
+        <aside class="sidebar">
+            <div class="sidebar-brand"><h2>🌿 بستان العجوة</h2><p>نظام إدارة المشتريات v7.1</p></div>
+            <nav class="sidebar-menu">
+                <div class="menu-label">القائمة الرئيسية</div>
+                <button class="menu-item on" id="menuReps" onclick="goTo('reps',this)"><span class="mi-icon">👥</span><span class="mi-text">المناديب</span></button>
+                <button class="menu-item" id="menuAdvs" onclick="goTo('advs',this)"><span class="mi-icon">💰</span><span class="mi-text">العهد</span></button>
+                <button class="menu-item" id="menuInvs" onclick="goTo('invs',this)"><span class="mi-icon">🧾</span><span class="mi-text">الفواتير</span></button>
+                <button class="menu-item" id="menuExps" onclick="goTo('exps',this)"><span class="mi-icon">📄</span><span class="mi-text">مصروفات</span></button>
+                <button class="menu-item" id="menuTax" onclick="goTo('tax',this)"><span class="mi-icon">🏛️</span><span class="mi-text">الضريبة</span></button>
+                <div class="menu-label" style="margin-top:6px">الإدارة</div>
+                <button class="menu-item" id="menuSuppliers" onclick="goTo('suppliers',this)"><span class="mi-icon">🏭</span><span class="mi-text">الموردين</span></button>
+                <button class="menu-item" id="menuCompanies" onclick="goTo('companies',this)"><span class="mi-icon">🏢</span><span class="mi-text">الشركات</span></button>
+                <button class="menu-item" id="menuUsers" onclick="goTo('users',this)"><span class="mi-icon">👤</span><span class="mi-text">المستخدمين</span></button>
+                <button class="menu-item" id="menuShare" onclick="goTo('share',this)"><span class="mi-icon">🔗</span><span class="mi-text">روابط</span></button>
+                <button class="menu-item" id="menuBackup" onclick="goTo('backup',this)"><span class="mi-icon">💾</span><span class="mi-text">نسخ احتياطي</span></button>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="user-info"><div class="user-avatar">👤</div><div><div class="user-name" id="userName">المدير</div><div class="user-role" id="userRole">admin</div></div></div>
+                <button class="logout-btn" onclick="doLogout()">🚪 تسجيل الخروج</button>
+            </div>
+        </aside>
+
+        <div class="main-area">
+            <header class="top-bar">
+                <div class="top-bar-right"><h1 class="page-title" id="pageTitle">👥 المناديب</h1></div>
+                <div class="top-bar-left">
+                    <button class="sync-btn" id="pullBtn" onclick="pullFromCloud()">⬇️ سحب</button>
+                    <button class="sync-btn" id="pushBtn" onclick="pushToCloud()">⬆️ رفع</button>
+                    <span id="syncStatus" style="font-size:10px;color:#94a3b8"></span>
+                </div>
+            </header>
+
+            <div class="page-content">
+                <div class="stats-row" id="statsRow">
+                    <div class="stat-mini c1"><div class="sm-row"><span class="sm-icon">👥</span><span class="sm-val" id="xReps">0</span></div><div class="sm-lbl">المناديب</div></div>
+                    <div class="stat-mini c2"><div class="sm-row"><span class="sm-icon">💰</span><span class="sm-val" id="xAdvs">0</span></div><div class="sm-lbl">العهد</div></div>
+                    <div class="stat-mini c3"><div class="sm-row"><span class="sm-icon">🧾</span><span class="sm-val" id="xInvs">0</span></div><div class="sm-lbl">الفواتير</div></div>
+                    <div class="stat-mini c4"><div class="sm-row"><span class="sm-icon">📤</span><span class="sm-val" id="xExp">0</span></div><div class="sm-lbl">مصروفات</div></div>
+                    <div class="stat-mini c5"><div class="sm-row"><span class="sm-icon">✅</span><span class="sm-val" id="xSettled">0</span></div><div class="sm-lbl">مسواه</div></div>
+                    <div class="stat-mini c6"><div class="sm-row"><span class="sm-icon">📂</span><span class="sm-val" id="xOpen">0</span></div><div class="sm-lbl">مفتوحة</div></div>
+                    <div class="stat-mini c7"><div class="sm-row"><span class="sm-icon">🏛️</span><span class="sm-val" id="xTax">0</span></div><div class="sm-lbl">ضريبية</div></div>
+                    <div class="stat-mini c8"><div class="sm-row"><span class="sm-icon">💰</span><span class="sm-val" id="xTotalInv">0</span></div><div class="sm-lbl">إجمالي</div></div>
+                </div>
+
+                <div id="p-reps" class="page on"></div>
+                <div id="p-advs" class="page"></div>
+                <div id="p-invs" class="page"></div>
+                <div id="p-exps" class="page"></div>
+                <div id="p-tax" class="page"></div>
+                <div id="p-suppliers" class="page"></div>
+                <div id="p-companies" class="page"></div>
+                <div id="p-users" class="page"></div>
+                <div id="p-share" class="page"></div>
+                <div id="p-backup" class="page"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/gas-compat.js"></script>
+    <script>
+
+    var CSOPTS = [
+        {g:'🌾 المزارع',v:['مزرعة عرعر','مزرعة الاكحل','مزرعة الاكحل شراكة','مزرعة الابل','مزرعة الغنم','مزرعة أبو طارق','مزرعة أبو عزام ضعا','مزرعة الاكحل الاستثمارية','مزرعة شجوى الشريف','مزرعة السليلة','مزرعة القفيف نخل','مزرعة القفيف خضار','مزرعة البحرة','مزرعة شجوى ابوبندر ابوفهد','مزرعة الكتيفة','مزرعة الاكحل عماد اللهيبي','مزرعة الثنيان']},
+        {g:'🏠 خاص',v:['أبو عزام خاص','أبو عامر الغنم - خاص','الديرة ابوبندر - خاص','الديرة أبو فهد - خاص','ابو عامر خاص','ابو عبدلله خاص']},
+        {g:'🏢 المرافق',v:['سكن الععمال','معمل البستان','سكن البستان','بستان العجوة','المحمية','المكتب','الصيانة','البوابة','المنتزه']},
+        {g:'🛒 الأنشطة التجارية',v:['خردوات كتابة','خردوات محل','خردوات العاب','كشك البليله','كشك شاي الجمر','كشك البطاطس','الكوفي','المطعم','المعرض','المعارض والمؤتمرات','المستودع','الايسكريم','الألعاب']},
+        {g:'📋 أخرى',v:['أخرى']}
+    ];
+    var DIRS = ['مصاريف عمومية','ضيافة','خصم مسموح به','مسموحات المبيعات','مصروف فواتي الكهرباء','مصروف فواتير المياة والوايتات','مصروف الهاتف والانترنت','رسوم التأمين الطبي','رواتب الإدارة','رسوم الجوازات','رسوم حكومية','مصروفات الزكاة والدخل','ضريبة القيمة المضافة'];
+    var D = {reps:[], advances:[], purchases:[], expenses:[], users:[], advRequests:[], suppliers:[], companies:[]};
+    var USER = null, MANUAL_ENTRY_ACTIVE = false, TAX_TAB = 'invoices';
+    var PAGE_TITLES = {
+        reps:'👥 المناديب', advs:'💰 العهد', invs:'🧾 الفواتير', exps:'📄 مصروفات',
+        tax:'🏛️ الضريبة', suppliers:'🏭 الموردين', companies:'🏢 الشركات',
+        users:'👤 المستخدمين', share:'🔗 روابط', backup:'💾 نسخ احتياطي'
+    };
+
+    // ============================================================
+    // ===== دوال مساعدة =====
+    // ============================================================
+    function $(id){ return document.getElementById(id); }
+    function f(n){ return Number(n||0).toLocaleString('en', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+    function fd(d){ if(!d) return '-'; var s = String(d).trim().split('T')[0]; var p = s.split('-'); if(p.length===3) return p[2]+'/'+p[1]+'/'+p[0].slice(2); return s; }
+    function tst(m,t){ t=t||'inf'; var ic={ok:'✓', er:'✗', inf:'ℹ'}; var e = document.createElement('div'); e.className='toast '+t; e.innerHTML='<b>'+ic[t]+'</b> <span>'+m+'</span>'; $('toasts').appendChild(e); setTimeout(function(){ if(e.parentNode) e.remove(); }, 3000); }
+    function addslashes(s){ return String(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'"'); }
+    function nextId(arr){ var mx=0; arr.forEach(function(x){ var n=Number(x.id); if(n>0 && n<99999999 && n>mx) mx=n; }); return mx+1; }
+    function calcTaxFor(amt,type){ if(type==='فاتورة ضريبية'){ var t = amt/1.15; return {tax:(amt-t).toFixed(2), taxable:t.toFixed(2)}; } return {tax:'0.00', taxable:'0.00'}; }
+    function buildCCOpts(sel){ var h=''; CSOPTS.forEach(function(g){ h+='<optgroup label="'+g.g+'">'; g.v.forEach(function(c){ h+='<option'+(sel&&sel===c?' selected':'')+'>'+c+'</option>'; }); h+='</optgroup>'; }); return h; }
+    function togCC(sel,oid){ var d = document.getElementById(oid+'Div'); if(d) d.style.display = sel.value==='أخرى'?'block':'none'; }
+    function getCCVal(sid,oid){ var s=$(sid); if(!s) return ''; return s.value==='أخرى'? ($(oid)? $(oid).value||'أخرى' : 'أخرى') : s.value; }
+    function buildSupplierOpts(sel){ var h='<option value="">-- اختر --</option>'; D.suppliers.forEach(function(s){ if(s.active!==false) h+='<option value="'+s.id+'"'+(sel&&String(sel)===String(s.id)?' selected':'')+'>'+s.name+(s.taxNo?' ('+s.taxNo+')':'')+'</option>'; }); return h; }
+    function buildCompanyOpts(sel){ var h='<option value="">-- اختر --</option>'; D.companies.forEach(function(c){ if(c.active!==false) h+='<option value="'+c.id+'"'+(sel&&String(sel)===String(c.id)?' selected':'')+'>'+c.name+(c.taxNo?' ('+c.taxNo+')':'')+'</option>'; }); return h; }
+    function getSupplierById(id){ var r=null; D.suppliers.forEach(function(s){ if(String(s.id)===String(id)) r=s; }); return r; }
+    function getCompanyById(id){ var r=null; D.companies.forEach(function(c){ if(String(c.id)===String(id)) r=c; }); return r; }
+    function findSupplierByTaxNo(taxNo){ if(!taxNo) return null; var tn=String(taxNo).trim().toLowerCase(); var found=null; D.suppliers.forEach(function(s){ if(s.taxNo && String(s.taxNo).trim().toLowerCase()===tn) found=s; }); return found; }
+    function sortByDesc(arr){ return arr.slice().sort(function(a,b){ return Number(b.id||0)-Number(a.id||0); }); }
+    function buildDirOpts(sel){ var h='<option value="">-- اختر --</option>'; DIRS.forEach(function(d){ h+='<option'+(sel&&sel===d?' selected':'')+'>'+d+'</option>'; }); return h; }
+    function getSupDisplay(p){ if(p.vendorName) return p.vendorName; if(p.supplierName){ var s=getSupplierById(p.supplierName); if(s) return s.name; } return '-'; }
+    function getRepName(repId){ var rn='-'; D.reps.forEach(function(r){ if(Number(r.id)===Number(repId)) rn=r.name; }); return rn; }
+    function getAdvRepName(advId){ var rn='-'; D.advances.forEach(function(a){ if(Number(a.id)===Number(advId)){ D.reps.forEach(function(r){ if(Number(r.id)===Number(a.repId)) rn=r.name; }); } }); return rn; }
+    function isAdmin(){ if(!USER) return false; var r=String(USER.role||'').toLowerCase().trim(); return r==='admin' || USER.username==='admin'; }
+    function isAll(){ if(!USER) return false; return String(USER.role||'').toLowerCase().trim()==='all'; }
+    function isTax(){ if(!USER) return false; return String(USER.role||'').toLowerCase().trim()==='tax'; }
+    function canEdit(){ return isAdmin() || isAll(); }
+    function canAccessTax(){ return isAdmin() || isTax(); }
+    function canManageUsers(){ return isAdmin(); }
+
+    // ============================================================
+    // ===== التخزين المحلي =====
+    // ============================================================
+    function saveLocal(){ try { localStorage.setItem('bustanLocal', JSON.stringify(D)); } catch(e){} }
+    function loadLocal(){ try { var s=localStorage.getItem('bustanLocal'); if(!s) return false; var d=JSON.parse(s); D.reps=d.reps||[]; D.advances=d.advances||[]; D.purchases=d.purchases||[]; D.expenses=d.expenses||[]; D.users=d.users||[]; D.advRequests=d.advRequests||[]; D.suppliers=d.suppliers||[]; D.companies=d.companies||[]; return true; } catch(e){ return false; } }
+
+    // ============================================================
+    // ===== الاتصال بالخادم =====
+    // ============================================================
+    function srv(fn){ var a=Array.prototype.slice.call(arguments,1); return new Promise(function(ok,no){ google.script.run.withSuccessHandler(function(res){ if(typeof res==='string'){ try{ res=JSON.parse(res); } catch(e){} } ok(res); }).withFailureHandler(function(e){ no(e); })[fn].apply(null,a); }); }
+    function syncSuppliersToServer(){ return new Promise(function(ok){ try { google.script.run.withSuccessHandler(function(r){ ok(r); }).withFailureHandler(function(){ ok(null); }).srvSaveSuppliers(D.suppliers); } catch(e){ ok(null); } }); }
+
+    // ============================================================
+    // ===== تسجيل الدخول والخروج =====
+    // ============================================================
+    function doLogin(){
+        var u = $('lUser').value.trim(), p = $('lPass').value.trim();
+        if(!u||!p){ alert('أدخل البيانات'); return; }
+        tst('جاري الدخول...','inf');
+        srv('srvAuthenticate', u, p).then(function(r){
+            if(r && r.ok && r.user){
+                USER = r.user;
+                $('loginPage').style.display = 'none';
+                $('mainApp').style.display = 'block';
+                $('userName').textContent = USER.name;
+                var roleLabel = isAdmin() ? 'مدير' : isAll() ? 'صلاحيات كاملة' : isTax() ? 'ضريبة' : '';
+                $('userRole').textContent = roleLabel;
+                // إظهار/إخفاء حسب الصلاحيات
+                var adminOnly = ['menuUsers','menuBackup'];
+                adminOnly.forEach(function(id){ var el=$(id); if(el) el.style.display = isAdmin() ? '' : 'none'; });
+                if(isTax()){ goTo('tax', document.getElementById('menuTax')); }
+                else { goTo('reps', document.getElementById('menuReps')); }
+                loadData();
+                tst('مرحباً '+USER.name+' ('+roleLabel+')','ok');
+            } else { tst(r && r.err ? r.err : 'فشل الدخول','er'); }
+        }).catch(function(){ tst('خطأ في الاتصال','er'); });
+    }
+
+    function doLogout(){ USER=null; $('loginPage').style.display='block'; $('mainApp').style.display='none'; $('lPass').value=''; }
+
+    // ============================================================
+    // ===== تحميل وعرض البيانات =====
+    // ============================================================
+    function loadData(){
+        loadLocal();
+        updateStats();
+        renderAll();
+        pullFromCloud();
+    }
+
+    function pullFromCloud(){
+        if(MANUAL_ENTRY_ACTIVE){ tst('انتظر انتهاء الإدخال اليدوي','er'); return; }
+        var btn = $('pullBtn'); if(!btn) return;
+        btn.disabled = true; btn.textContent = '⏳ سحب...';
+        var st = $('syncStatus'); if(st) st.textContent = 'جاري السحب...';
+        try {
+            google.script.run.withSuccessHandler(function(r){
+                if(typeof r==='string'){ try{ r=JSON.parse(r); } catch(e){} }
+                if(r && r.ok && r.d){
+                    D.reps = r.d.r || [];
+                    D.advances = r.d.a || [];
+                    D.purchases = r.d.p || [];
+                    D.expenses = r.d.x || [];
+                    D.users = r.d.u || D.users;
+                    D.advRequests = r.d.q || D.advRequests;
+                    D.suppliers = r.d.sup || D.suppliers;
+                    D.companies = r.d.comp || D.companies;
+                    saveLocal();
+                    updateStats();
+                    renderAll();
+                    var now = new Date();
+                    var ts = String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+                    if(st) st.textContent = 'سحب: '+ts;
+                    tst('تم سحب البيانات','ok');
+                } else { if(st) st.textContent = 'فشل السحب'; }
+                btn.disabled = false; btn.textContent = '⬇️ سحب';
+            }).withFailureHandler(function(){
+                if(st) st.textContent = 'لا يوجد اتصال';
+                btn.disabled = false; btn.textContent = '⬇️ سحب';
+            }).srvGetData();
+        } catch(e){ btn.disabled=false; btn.textContent='⬇️ سحب'; }
+    }
+
+    function pushToCloud(){
+        var btn = $('pushBtn'); if(!btn) return;
+        btn.disabled = true; btn.textContent = '⏳ رفع...';
+        var st = $('syncStatus'); if(st) st.textContent = 'جاري الرفع...';
+        try {
+            google.script.run.withSuccessHandler(function(r){
+                if(typeof r==='string'){ try{ r=JSON.parse(r); } catch(e){} }
+                if(r && r.success){
+                    saveLocal();
+                    var now = new Date();
+                    var ts = String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+                    if(st) st.textContent = 'رفع: '+ts;
+                    tst('تم الرفع','ok');
+                } else { if(st) st.textContent = 'فشل الرفع'; tst('فشل الرفع','er'); }
+                btn.disabled = false; btn.textContent = '⬆️ رفع';
+            }).withFailureHandler(function(){
+                if(st) st.textContent = 'فشل الرفع';
+                btn.disabled = false; btn.textContent = '⬆️ رفع';
+            }).srvSaveAll({reps:D.reps, advances:D.advances, purchases:D.purchases, expenses:D.expenses, suppliers:D.suppliers, companies:D.companies});
+        } catch(e){ btn.disabled=false; btn.textContent='⬆️ رفع'; }
+    }
+
+    function saveAndRefresh(){
+        saveLocal();
+        updateStats();
+        renderAll();
+        try {
+            google.script.run.withSuccessHandler(function(r){
+                if(typeof r==='string'){ try{ r=JSON.parse(r); } catch(e){} }
+                if(r && r.success) tst('تم الحفظ','ok');
+            }).withFailureHandler(function(){ tst('محفوظ محلياً','inf'); }).srvSaveAll({reps:D.reps, advances:D.advances, purchases:D.purchases, expenses:D.expenses, suppliers:D.suppliers, companies:D.companies});
+        } catch(e){}
+    }
+
+    function goTo(pageId, btnEl){
+        try {
+            document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('on'); });
+            document.querySelectorAll('.menu-item').forEach(function(m){ m.classList.remove('on'); });
+            var pg = document.getElementById('p-'+pageId); if(pg) pg.classList.add('on');
+            if(btnEl) btnEl.classList.add('on');
+            var titleEl = document.getElementById('pageTitle'); if(titleEl && PAGE_TITLES[pageId]) titleEl.textContent = PAGE_TITLES[pageId];
+            // تحميل محتوى الصفحة عند الطلب
+            if(pageId==='tax') renderTax();
+            if(pageId==='users') renderUsers();
+            if(pageId==='share') renderShare();
+            if(pageId==='backup') renderBackup();
+            if(pageId==='suppliers') renderSuppliers();
+            if(pageId==='companies') renderCompanies();
+        } catch(e){}
+    }
+
+    function updateStats(){
+        var ar = 0; D.reps.forEach(function(r){ if(r.active===true || r.active==='true') ar++; });
+        var expTotal = 0; D.expenses.forEach(function(x){ if(x.status==='approved') expTotal += Number(x.amount); });
+        var settled = 0, open2 = 0; D.advances.forEach(function(a){ if(a.status==='settled') settled++; else open2++; });
+        var taxInvs = 0; D.purchases.forEach(function(p){ if(p.invoiceType==='فاتورة ضريبية') taxInvs++; });
+        var totalInvAmt = 0; D.purchases.forEach(function(p){ totalInvAmt += Number(p.amount); });
+        var el; el=$('xReps'); if(el) el.textContent=ar; el=$('xAdvs'); if(el) el.textContent=D.advances.length;
+        el=$('xInvs'); if(el) el.textContent=D.purchases.length; el=$('xExp'); if(el) el.textContent=f(expTotal);
+        el=$('xSettled'); if(el) el.textContent=settled; el=$('xOpen'); if(el) el.textContent=open2;
+        el=$('xTax'); if(el) el.textContent=taxInvs; el=$('xTotalInv'); if(el) el.textContent=f(totalInvAmt);
+    }
+
+    function renderAll(){ renderReps(); renderAdvs(); renderInvs(); renderExps(); renderTax(); renderSuppliers(); renderCompanies(); renderUsers(); renderShare(); renderBackup(); }
+
+    // ============================================================
+    // ===== المناديب =====
+    // ============================================================
+    function renderReps(){
+        var el = document.getElementById('p-reps'); if(!el) return;
+        var sorted = sortByDesc(D.reps);
+        var h = '<div class="card"><div class="card-header"><h3>👥 المناديب ('+D.reps.length+')</h3><button class="btn btn-green btn-sm" onclick="addRep()">➕ إضافة</button></div>';
+        h += '<div class="card-body"><table class="dt"><thead><tr><th>#</th><th>الاسم</th><th>الهاتف</th><th>القسم</th><th>PIN</th><th>الحالة</th><th>⚗️</th></tr></thead><tbody>';
+        sorted.forEach(function(r){
+            var st = r.active===true || r.active==='true' ? '<span class="badge badge-green">نشط</span>' : '<span class="badge badge-red">معطل</span>';
+            h += '<tr><td>'+r.id+'</td><td style="font-weight:700">'+r.name+'</td><td>'+(r.phone||'-')+'</td><td>'+(r.dept||'-')+'</td><td>'+(r.pin||'-')+'</td><td>'+st+'</td>';
+            h += '<td><button class="btn btn-blue btn-sm" onclick="editRep('+r.id+')">✏️</button> <button class="btn btn-red btn-sm" onclick="toggleRep('+r.id+')">'+(r.active?'🔒':'🔓')+'</button></td></tr>';
+        });
+        if(!D.reps.length) h += '<tr><td colspan="7" class="empty-state">لا يوجد مناديب</td></tr>';
+        h += '</tbody></table></div></div>';
+        el.innerHTML = h;
+    }
+
+    function addRep(){ var name=prompt('اسم المندوب:'); if(!name) return; var phone=prompt('الهاتف:',''); var dept=prompt('القسم:',''); var pin=prompt('PIN:',''); D.reps.push({id:nextId(D.reps), name:name, phone:phone, dept:dept, notes:'', active:true, pin:pin}); saveAndRefresh(); tst('تم إضافة المندوب','ok'); }
+
+    function editRep(id){ var rep=null; D.reps.forEach(function(r){ if(Number(r.id)===id) rep=r; }); if(!rep) return; var el=document.getElementById('p-reps'); if(!el) return; var isActive=rep.active===true || rep.active==='true'; var h='<div class="card"><div class="card-header"><h3>✏️ تعديل المندوب #'+id+'</h3><button class="btn btn-gray btn-sm" onclick="renderReps()">✕</button></div><div class="card-body-pad">'; h+='<div class="form-grid"><div class="form-group"><label class="form-label">الاسم</label><input class="form-input" id="eRName" value="'+addslashes(rep.name)+'"></div><div class="form-group"><label class="form-label">الهاتف</label><input class="form-input" id="eRPhone" value="'+(rep.phone||'')+'"></div></div>'; h+='<div class="form-grid"><div class="form-group"><label class="form-label">القسم</label><input class="form-input" id="eRDept" value="'+addslashes(rep.dept||'')+'"></div><div class="form-group"><label class="form-label">PIN</label><input class="form-input" id="eRPin" value="'+(rep.pin||'')+'" maxlength="4"></div></div>'; h+='<div class="form-grid"><div class="form-group"><label class="form-label">ملاحظات</label><input class="form-input" id="eRNotes" value="'+addslashes(rep.notes||'')+'"></div><div class="form-group"><label class="form-label">الحالة</label><select class="form-input" id="eRActive"><option value="true"'+(isActive?' selected':'')+'>نشط</option><option value="false"'+(!isActive?' selected':'')+'>معطل</option></select></div></div>'; h+='<button class="btn btn-primary" onclick="saveRep('+id+')" style="width:100%;justify-content:center;padding:10px">💾 حفظ</button></div></div>'; el.innerHTML=h; }
+
+    function saveRep(id){ D.reps.forEach(function(r){ if(Number(r.id)===id){ r.name=$('eRName').value; r.phone=$('eRPhone').value; r.dept=$('eRDept').value; r.pin=$('eRPin').value; r.notes=$('eRNotes').value; r.active=$('eRActive').value==='true'; }}); saveAndRefresh(); tst('تم التعديل','ok'); }
+
+    function toggleRep(id){ D.reps.forEach(function(r){ if(Number(r.id)===id) r.active = !r.active; }); saveAndRefresh(); tst('تم تغيير الحالة','ok'); }
+
+    // ============================================================
+    // ===== العهد =====
+    // ============================================================
+    function renderAdvs(){
+        var el = document.getElementById('p-advs'); if(!el) return;
+        var repOpts = '<option value="">-- الكل --</option>'; D.reps.forEach(function(r){ repOpts += '<option value="'+r.id+'">'+r.name+'</option>'; });
+        var pending = sortByDesc(D.advRequests.filter(function(r){ return r.status==='pending'; }));
+        var h = '';
+        if(pending.length && isAdmin()){
+            h += '<div class="card req-card"><div class="card-header"><h3>📋 طلبات العهد المعلقة ('+pending.length+')</h3></div>';
+            h += '<div class="card-body"><table class="dt"><thead><tr><th>#</th><th>المندوب</th><th>المبلغ</th><th>الغرض</th><th>ملاحظات</th><th>التاريخ</th><th>إجراءات</th></tr></thead><tbody>';
+            pending.forEach(function(r){ var rn=getRepName(r.repId); h+='<tr><td style="color:#d97706;font-weight:700">#'+r.id+'</td><td>'+rn+'</td><td style="font-weight:700">'+f(r.amount)+' ر.س</td><td>'+(r.purpose||'-')+'</td><td>'+(r.notes||'-')+'</td><td>'+fd(r.requestDate)+'</td><td><button class="btn btn-green btn-sm" onclick="approveAdvReq('+r.id+','+r.repId+','+r.amount+',\''+addslashes(r.purpose)+'\')">✅</button> <button class="btn btn-red btn-sm" onclick="rejectAdvReq('+r.id+')">❌</button></td></tr>'; });
+            h += '</tbody></table></div></div>';
+        }
+        h += '<div class="card"><div class="card-header"><h3>💰 العهد المالية ('+D.advances.length+')</h3><button class="btn btn-green btn-sm" onclick="addAdv()">➕ إضافة</button></div>';
+        h += '<div class="card-body-pad"><div class="form-grid"><div class="form-group"><label class="form-label">فلترة حسب المندوب</label><select class="form-input" id="advFilterRep" onchange="filterAdvs()">'+repOpts+'</select></div>';
+        h += '<div class="form-group"><label class="form-label">إجمالي العهد</label><input class="form-input" id="advFilterTotal" readonly value="0.00"></div>';
+        h += '<div class="form-group"><label class="form-label">إجمالي المصروفات</label><input class="form-input" id="advFilterSpent" readonly value="0.00"></div>';
+        h += '<div class="form-group"><label class="form-label">المتبقي</label><input class="form-input" id="advFilterRem" readonly value="0.00"></div></div></div>';
+        h += '<div class="card-body"><table class="dt"><thead><tr><th>#</th><th>المندوب</th><th>المبلغ</th><th>المصروفات</th><th>التاريخ</th><th>الغرض</th><th>الحالة</th><th>تسوية</th><th>⚗️</th></tr></thead><tbody id="advBody">'+buildAdvRows(D.advances)+'</tbody></table></div></div>';
+        el.innerHTML = h; calcAdvFilterTotal(D.advances);
+    }
+
+    function buildAdvRows(advs){ var h=''; var sorted=sortByDesc(advs); sorted.forEach(function(a){ var rn=getRepName(a.repId); var ts=0; D.purchases.forEach(function(p){ if(Number(p.advId)===Number(a.id)) ts+=Number(p.amount); }); D.expenses.forEach(function(x){ if(Number(x.advId)===Number(a.id) && x.status==='approved') ts+=Number(x.amount); }); var st=a.status==='open'?'<span class="badge badge-blue">مفتوحة</span>':a.status==='settled'?'<span class="badge badge-green">مسواة</span>':'<span class="badge badge-amber">بانتظار</span>'; var sd=a.status==='settled' && a.settleDate ? '<span style="color:#059669;font-weight:700">'+fd(a.settleDate)+'</span>' : '<span style="color:#94a3b8">—</span>'; h+='<tr><td style="color:#d97706;font-weight:700">#'+a.id+'</td><td>'+rn+'</td><td style="font-weight:700">'+f(a.amount)+'</td><td style="color:#ef4444;font-weight:700">'+f(ts)+'</td><td>'+fd(a.date)+'</td><td>'+(a.purpose||'-')+'</td><td>'+st+'</td><td>'+sd+'</td>'; h+='<td><button class="btn btn-blue btn-sm" onclick="editAdv('+a.id+')">✏️</button> <button class="btn btn-orange btn-sm" onclick="settleAdv('+a.id+')">✅</button> <button class="btn btn-red btn-sm" onclick="delAdv('+a.id+')">🗑️</button></td></tr>'; }); if(!sorted.length) h='<tr><td colspan="9" class="empty-state">لا توجد عهد</td></tr>'; return h; }
+
+    function filterAdvs(){ var rid=Number($('advFilterRep').value); var fl=D.advances; if(rid) fl=fl.filter(function(a){ return Number(a.repId)===rid; }); var ab=document.getElementById('advBody'); if(ab) ab.innerHTML=buildAdvRows(fl); calcAdvFilterTotal(fl); }
+    function calcAdvFilterTotal(advs){ var t=0,s=0; advs.forEach(function(a){ t+=Number(a.amount); D.purchases.forEach(function(p){ if(Number(p.advId)===Number(a.id)) s+=Number(p.amount); }); D.expenses.forEach(function(x){ if(Number(x.advId)===Number(a.id) && x.status==='approved') s+=Number(x.amount); }); }); var el; el=$('advFilterTotal'); if(el) el.value=f(t); el=$('advFilterSpent'); if(el) el.value=f(s); el=$('advFilterRem'); if(el){ el.value=f(t-s); el.style.color=(t-s)>=0?'#059669':'#ef4444'; } }
+
+    function approveAdvReq(reqId, repId, amt, purpose){ if(!confirm('الموافقة وإنشاء عهدة '+f(amt)+' ر.س؟')) return; srv('srvUpdateAdvRequest', reqId, {status:'approved', actionDate:new Date().toISOString().split('T')[0]}).then(function(r){ if(r && r.success){ D.advances.push({id:nextId(D.advances), repId:repId, amount:amt, date:new Date().toISOString().split('T')[0], purpose:purpose, notes:'من طلب #'+reqId, status:'open', settleDate:''}); D.advRequests.forEach(function(x){ if(Number(x.id)===reqId){ x.status='approved'; x.actionDate=new Date().toISOString().split('T')[0]; } }); saveAndRefresh(); tst('تمت الموافقة','ok'); } else { tst('فشل','er'); } }).catch(function(){ tst('خطأ','er'); }); }
+    function rejectAdvReq(reqId){ if(!confirm('رفض الطلب؟')) return; srv('srvUpdateAdvRequest', reqId, {status:'rejected', actionDate:new Date().toISOString().split('T')[0]}).then(function(r){ if(r && r.success){ D.advRequests.forEach(function(x){ if(Number(x.id)===reqId){ x.status='rejected'; x.actionDate=new Date().toISOString().split('T')[0]; } }); renderAll(); tst('تم الرفض','ok'); } else { tst('فشل','er'); } }).catch(function(){ tst('خطأ','er'); }); }
+    function addAdv(){ var ro=''; D.reps.forEach(function(r){ if(r.active===true || r.active==='true') ro+='<option value="'+r.id+'">'+r.name+'</option>'; }); var el=document.getElementById('p-advs'); if(!el) return; var h='<div class="card"><div class="card-header"><h3>➕ إضافة عهدة</h3><button class="btn btn-gray btn-sm" onclick="renderAdvs()">✕</button></div><div class="card-body-pad">'; h+='<div class="form-grid"><div class="form-group"><label class="form-label">المندوب</label><select class="form-input" id="nARep">'+ro+'</select></div><div class="form-group"><label class="form-label">المبلغ</label><input class="form-input" id="nAAmt" type="number" step="0.01"></div></div>'; h+='<div class="form-grid"><div class="form-group"><label class="form-label">التاريخ</label><input class="form-input" id="nADate" type="date" value="'+new Date().toISOString().split('T')[0]+'"></div><div class="form-group"><label class="form-label">الغرض</label><input class="form-input" id="nAPurpose"></div></div>'; h+='<div class="form-group"><label class="form-label">ملاحظات</label><input class="form-input" id="nANotes"></div>'; h+='<button class="btn btn-primary" onclick="saveNewAdv()" style="width:100%;justify-content:center;padding:10px">💾 حفظ</button></div></div>'; el.innerHTML=h; }
+    function saveNewAdv(){ var rp=Number($('nARep').value), am=parseFloat($('nAAmt').value); if(!rp||isNaN(am)){ alert('أدخل البيانات'); return; } D.advances.push({id:nextId(D.advances), repId:rp, amount:am, date:$('nADate').value, purpose:$('nAPurpose').value, notes:$('nANotes').value, status:'open', settleDate:''}); saveAndRefresh(); tst('تمت الإضافة','ok'); }
+    function editAdv(id){ var a=null; D.advances.forEach(function(x){ if(Number(x.id)===id) a=x; }); if(!a) return; var el=document.getElementById('p-advs'); if(!el) return; var ro=''; D.reps.forEach(function(r){ ro+='<option value="'+r.id+'"'+(Number(r.id)===Number(a.repId)?' selected':'')+'>'+r.name+'</option>'; }); var h='<div class="card"><div class="card-header"><h3>✏️ تعديل العهدة #'+id+'</h3><button class="btn btn-gray btn-sm" onclick="renderAdvs()">✕</button></div><div class="card-body-pad">'; h+='<div class="form-grid"><div class="form-group"><label class="form-label">المندوب</label><select class="form-input" id="eARep">'+ro+'</select></div><div class="form-group"><label class="form-label">المبلغ</label><input class="form-input" id="eAAmt" type="number" step="0.01" value="'+a.amount+'"></div></div>'; h+='<div class="form-grid"><div class="form-group"><label class="form-label">التاريخ</label><input class="form-input" id="eADate" type="date" value="'+(a.date||'')+'"></div><div class="form-group"><label class="form-label">الغرض</label><input class="form-input" id="eAPurpose" value="'+addslashes(a.purpose||'')+'"></div></div>'; h+='<div class="form-grid"><div class="form-group"><label class="form-label">ملاحظات</label><input class="form-input" id="eANotes" value="'+addslashes(a.notes||'')+'"></div><div class="form-group"><label class="form-label">الحالة</label><select class="form-input" id="eAStatus"><option value="open"'+(a.status==='open'?' selected':'')+'>مفتوحة</option><option value="pending"'+(a.status==='pending'?' selected':'')+'>بانتظار</option><option value="settled"'+(a.status==='settled'?' selected':'')+'>مسواة</option></select></div></div>'; h+='<button class="btn btn-primary" onclick="saveAdv('+id+')" style="width:100%;justify-content:center;padding:10px">💾 حفظ</button></div></div>'; el.innerHTML=h; }
+    function saveAdv(id){ D.advances.forEach(function(a){ if(Number(a.id)===id){ a.repId=Number($('eARep').value); a.amount=Number($('eAAmt').value); a.date=$('eADate').value; a.purpose=$('eAPurpose').value; a.notes=$('eANotes').value; a.status=$('eAStatus').value; if(a.status==='settled' && !a.settleDate) a.settleDate=new Date().toISOString().split('T')[0]; } }); saveAndRefresh(); tst('تم التعديل','ok'); }
+    function settleAdv(id){ D.advances.forEach(function(a){ if(Number(a.id)===id){ a.status='settled'; a.settleDate=new Date().toISOString().split('T')[0]; } }); saveAndRefresh(); tst('تمت التسوية','ok'); }
+    function delAdv(id){ if(!confirm('حذف العهدة؟')) return; D.advances = D.advances.filter(function(a){ return Number(a.id)!==id; }); saveAndRefresh(); tst('تم الحذف','ok'); }
+
+    // ============================================================
+    // ===== الفواتير =====
+    // ============================================================
+    function renderInvs(){
+        var el = document.getElementById('p-invs'); if(!el) return;
+        var ro='<option value="">-- الكل --</option>'; D.reps.forEach(function(r){ ro+='<option value="'+r.id+'">'+r.name+'</option>'; });
+        var ao = buildInvAdvOpts(0);
+        var h='<div class="card"><div class="card-header"><h3>🧾 الفواتير ('+D.purchases.length+')</h3><div><button class="btn btn-green btn-sm" onclick="addInv()">➕ إضافة</button> <button class="btn btn-blue btn-sm" onclick="addManual()">📝 يدوي (30)</button> <button class="btn btn-purple btn-sm" onclick="exportInvsExcel()">📊 Excel</button></div></div>';
+        h+='<div class="card-body-pad"><div class="form-grid">';
+        h+='<div class="form-group"><label class="form-label">المندوب</label><select class="form-input" id="invFilterRep" onchange="updateAdvFilter()">'+ro+'</select></div>';
+        h+='<div class="form-group"><label class="form-label">العهدة</label><select class="form-input" id="invFilterAdv" onchange="filterInvs()">'+ao+'</select></div>';
+        h+='<div class="form-group"><label class="form-label">💰 إجمالي العهد</label><input class="form-input" id="invAdvTotal" readonly value="0.00" style="font-weight:900;color:#3b82f6;font-size:14px"></div>';
+        h+='<div class="form-group"><label class="form-label">🧾 إجمالي الفواتير</label><input class="form-input" id="invFilterTotal" readonly value="0.00" style="font-weight:900;color:#d97706;font-size:14px"></div>';
+        h+='<div class="form-group"><label class="form-label">🟢 المتبقي</label><input class="form-input" id="invFilterRem" readonly value="0.00" style="font-weight:900;font-size:14px"></div>';
+        h+='</div></div>';
+        h+='<div class="card-body"><table class="dt"><thead><tr>';
+        h+='<th>#</th><th>المندوب</th><th>رقم الفاتورة</th><th>المورد</th><th>الإجمالي</th><th>البيان</th><th>مركز التكلفة</th><th>التوجيه</th><th>ملاحظة</th><th>⚗️</th>';
+        h+='</tr></thead><tbody id="invBody">'+buildInvRows(D.purchases)+'</tbody>';
+        h+='<tfoot id="invFoot">'+buildInvFoot(D.purchases)+'</tfoot></table></div></div>';
+        el.innerHTML=h; calcInvFilterTotal(D.purchases);
+    }
+
+    function buildInvAdvOpts(rid){ var h='<option value="">-- الكل --</option>'; D.advances.forEach(function(a){ if(rid && Number(a.repId)!==Number(rid)) return; var rn=getRepName(a.repId); h+='<option value="'+a.id+'">#'+a.id+' — '+rn+'</option>'; }); return h; }
+    function updateAdvFilter(){ var rid=Number($('invFilterRep').value)||0; $('invFilterAdv').innerHTML=buildInvAdvOpts(rid); filterInvs(); }
+
+    function buildInvRows(ps){ var sorted=sortByDesc(ps); var h=''; sorted.forEach(function(p){ var rn=getAdvRepName(p.advId); var vn=getSupDisplay(p); h+='<tr>'; h+='<td style="color:#d97706;font-weight:700">#'+p.id+'</td>'; h+='<td>'+rn+'</td>'; h+='<td>'+(p.invoiceNo||'-')+'</td>'; h+='<td style="font-weight:600;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+addslashes(vn)+'">'+vn+'</td>'; h+='<td style="font-weight:700">'+f(p.amount)+'</td>'; h+='<td style="max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+addslashes(p.desc||'')+'">'+(p.desc||'-')+'</td>'; h+='<td>'+(p.costCenter||'-')+'</td>'; h+='<td style="font-size:10px;color:#8b5cf6;font-weight:600">'+(p.direction||'-')+'</td>'; h+='<td style="max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;color:#64748b" title="'+addslashes(p.notes||'')+'">'+(p.notes||'-')+'</td>'; h+='<td><button class="btn btn-blue btn-sm" onclick="editInv('+p.id+')">✏️</button> <button class="btn btn-amber btn-sm" onclick="moveInv('+p.id+')">📦</button> <button class="btn btn-red btn-sm" onclick="delInv('+p.id+')">🗑️</button></td>'; h+='</tr><tr id="moveArea'+p.id+'" style="display:none"><td colspan="10" id="moveContent'+p.id+'"></td></tr>'; }); if(!sorted.length) h='<tr><td colspan="10" class="empty-state">لا توجد فواتير</td></tr>'; return h; }
+    function buildInvFoot(ps){ var t=0; ps.forEach(function(p){ t+=Number(p.amount); }); return '<tr><td colspan="4">الإجمالي</td><td>'+f(t)+'</td><td colspan="5"></td></tr>'; }
+    function filterInvs(){ var rid=Number($('invFilterRep').value); var aid=Number($('invFilterAdv').value); var fl=D.purchases; if(aid) fl=fl.filter(function(p){ return Number(p.advId)===aid; }); if(rid){ var rai=[]; D.advances.forEach(function(a){ if(Number(a.repId)===rid) rai.push(Number(a.id)); }); fl=fl.filter(function(p){ return rai.indexOf(Number(p.advId))>-1; }); } var ib=document.getElementById('invBody'); if(ib) ib.innerHTML=buildInvRows(fl); var ifoot=document.getElementById('invFoot'); if(ifoot) ifoot.innerHTML=buildInvFoot(fl); calcInvFilterTotal(fl); }
+    function calcInvFilterTotal(ps){ var totalInvs=0; ps.forEach(function(p){ totalInvs+=Number(p.amount); }); var el; el=$('invFilterTotal'); if(el){ el.value=f(totalInvs); el.style.color='#d97706'; } var aid=0,rid=0; el=$('invFilterAdv'); if(el) aid=Number(el.value)||0; el=$('invFilterRep'); if(el) rid=Number(el.value)||0; var totalAdv=0; if(aid){ D.advances.forEach(function(a){ if(Number(a.id)===aid) totalAdv+=Number(a.amount); }); } else if(rid){ D.advances.forEach(function(a){ if(Number(a.repId)===rid) totalAdv+=Number(a.amount); }); } else { D.advances.forEach(function(a){ totalAdv+=Number(a.amount); }); } el=$('invAdvTotal'); if(el){ el.value=f(totalAdv)+' ر.س'; el.style.color='#3b82f6'; } var rem=totalAdv-totalInvs; el=$('invFilterRem'); if(el){ el.value=f(rem)+' ر.س'; el.style.color=rem>=0?'#059669':'#ef4444'; el.style.fontWeight='900'; } }
+
+    // ===== إضافة فاتورة =====
+    function addInv(){ var ao=''; D.advances.forEach(function(a){ if(a.status!=='settled'){ var rn=getRepName(a.repId); ao+='<option value="'+a.id+'">#'+a.id+' - '+rn+'</option>'; } }); var el=document.getElementById('p-invs'); if(!el) return; var h='<div class="card"><div class="card-header"><h3>➕ فاتورة جديدة</h3><button class="btn btn-gray btn-sm" onclick="renderInvs()">✕</button></div><div class="card-body-pad">'; h+='<div class="form-group"><label class="form-label">العهدة</label><select class="form-input" id="nPAdv">'+ao+'</select></div>'; h+='<div class="form-grid"><div class="form-group"><label class="form-label">نوع الفاتورة</label><select class="form-input" id="nPType" onchange="calcNewTax();toggleTaxFields()"><option>فاتورة عادية</option><option>فاتورة ضريبية</option><option>سند قبض</option><option>إيصال</option><option>أخرى</option></select></div>'; h+='<div class="form-group"><label class="form-label">رقم الفاتورة</label><input class="form-input" id="nPNo"></div></div>'; h+='<div class="form-grid"><div class="form-group"><label class="form-label">الإجمالي</label><input class="form-input" id="nPAmt" type="number" step="0.01" oninput="calcNewTax()"></div>'; h+='<div class="form-group"><label class="form-label">الضريبة</label><input class="form-input" id="nPTax" readonly></div>'; h+='<div class="form-group"><label class="form-label">خاضع</label><input class="form-input" id="nPTaxable" readonly></div></div>'; h+='<div class="form-grid"><div class="form-group"><label class="form-label">🔢 الرقم الضريبي</label><input class="form-input" id="nPNewTaxNo" placeholder="أدخل الرقم الضريبي..." style="direction:ltr;font-family:monospace;font-size:14px;font-weight:700;text-align:center;letter-spacing:1px" oninput="onInvTaxNoInput()" onblur="onInvTaxNoBlur()"></div>'; h+='<div class="form-group"><label class="form-label">🏪 اسم المورد (تلقائي)</label><input class="form-input" id="nPNewSupName" readonly placeholder="يظهر بعد إدخال الرقم الضريبي"></div></div>'; h+='<input type="hidden" id="nPNewSupId" value="">'; h+='<div id="taxFields" style="display:none"><div class="form-grid"><div class="form-group"><label class="form-label">🏢 الشركة</label><select class="form-input" id="nPCompany">'+buildCompanyOpts()+'</select></div><div class="form-group"></div></div></div>'; h+='<div class="form-grid"><div class="form-group"><label class="form-label">اسم المورد (يدوي)</label><input class="form-input" id="nPVendor" placeholder="اكتب اسم المورد يدوياً"></div>'; h+='<div class="form-group"><label class="form-label">التوجيه</label><select class="form-input" id="nPDir">'+buildDirOpts()+'</select></div></div>'; h+='<div class="form-grid"><div class="form-group"><label class="form-label">مركز التكلفة</label><select class="form-input" id="nPCC" onchange="togCC(this,\'nPOther\')">'+buildCCOpts()+'</select></div>'; h+='<div class="form-group" id="nPOtherDiv" style="display:none"><label class="form-label">حدد</label><input class="form-input" id="nPOther"></div>'; h+='<div class="form-group"><label class="form-label">التاريخ</label><input class="form-input" id="nPDate" type="date" value="'+new Date().toISOString().split('T')[0]+'"></div></div>'; h+='<div class="form-grid"><div class="form-group"><label class="form-label">البيان</label><input class="form-input" id="nPDesc"></div>'; h+='<div class="form-group"><label class="form-label">ملاحظات</label><input class="form-input" id="nPNotes"></div></div>'; h+='<button class="btn btn-primary" onclick="saveNewInv()" style="width:100%;justify-content:center;padding:10px">💾 حفظ</button></div></div>'; el.innerHTML=h; }
+
+    function onInvTaxNoInput(){ onTaxNoInput('nPNewTaxNo','nPNewSupName','nPNewSupId'); }
+    function onInvTaxNoBlur(){ onTaxNoBlur('nPNewTaxNo','nPNewSupName','nPNewSupId'); }
+    function toggleTaxFields(){ var tf=document.getElementById('taxFields'); if(!tf) return; var tp=$('nPType'); if(!tp) return; tf.style.display=tp.value==='فاتورة ضريبية'?'block':'none'; }
+    function calcNewTax(){ var a=Number($('nPAmt').value)||0, t=$('nPType').value, r=calcTaxFor(a,t); var el; el=$('nPTax'); if(el) el.value=r.tax; el=$('nPTaxable'); if(el) el.value=r.taxable; }
+
+    function onTaxNoInput(tid,nid,hid){ var tv=$(tid).value.trim(); var ne=$(nid); var he=hid?$(hid):null; if(!tv){ if(ne){ ne.value=''; ne.style.borderColor='#e2e8f0'; ne.style.background='#f8fafc'; ne.style.color='#1e293b'; ne.style.fontWeight='500'; } if(he) he.value=''; return; } var sup=findSupplierByTaxNo(tv); if(sup){ if(ne){ ne.value=sup.name; ne.style.borderColor='#059669'; ne.style.background='#f0fdf4'; ne.style.color='#059669'; ne.style.fontWeight='700'; } if(he) he.value=sup.id; } else { if(ne){ ne.value='⚠️ مورد غير مسجل'; ne.style.borderColor='#ef4444'; ne.style.background='#fef2f2'; ne.style.color='#ef4444'; ne.style.fontWeight='700'; } if(he) he.value=''; } }
+    function onTaxNoBlur(tid,nid,hid){ var tv=$(tid).value.trim(); if(!tv) return; var sup=findSupplierByTaxNo(tv); if(!sup){ if(confirm('مورد غير مسجل برقم: '+tv+'\nإضافته كمورد جديد؟')){ var nm=prompt('اسم المورد:'); if(nm){ D.suppliers.push({id:nextId(D.suppliers), name:nm, taxNo:tv, phone:'', email:'', active:true}); saveLocal(); var ne=$(nid); if(ne){ ne.value=nm; ne.style.borderColor='#059669'; ne.style.background='#f0fdf4'; ne.style.color='#059669'; ne.style.fontWeight='700'; } var he=hid?$(hid):null; if(he) he.value=String(D.suppliers[D.suppliers.length-1].id); tst('تم إضافة: '+nm,'ok'); syncSuppliersToServer(); } } } }
+
+    function saveNewInv(){
+        var ai=Number($('nPAdv').value), am=Number($('nPAmt').value);
+        if(!ai||!am){ alert('أدخل البيانات'); return; }
+        var supId=$('nPNewSupId')?$('nPNewSupId').value:'';
+        var taxNo=$('nPNewTaxNo')?$('nPNewTaxNo').value.trim():'';
+        var compId=$('nPCompany')?$('nPCompany').value:'';
+        var vendorName=$('nPVendor')?$('nPVendor').value.trim():'';
+        var direction=$('nPDir')?$('nPDir').value:'';
+        var doSave = function(){
+            var purchaseData = {
+                advId:ai, amount:am,
+                taxableAmount:Number($('nPTaxable')?$('nPTaxable').value:0),
+                taxAmount:Number($('nPTax')?$('nPTax').value:0),
+                invoiceType:$('nPType').value,
+                invoiceNo:$('nPNo').value,
+                costCenter:getCCVal('nPCC','nPOther'),
+                desc:$('nPDesc').value,
+                date:$('nPDate').value,
+                notes:$('nPNotes').value,
+                supplierName:supId,
+                supplierTaxNo:taxNo,
+                companyId:compId,
+                vendorName:vendorName,
+                direction:direction
+            };
+            srv('srvAddPurchase', purchaseData).then(function(r){
+                if(r && r.success){
+                    D.purchases.push(Object.assign({id:r.id}, purchaseData));
+                    saveLocal(); updateStats(); renderInvs();
+                    tst('تم الحفظ #'+r.id,'ok');
+                } else { tst('فشل الحفظ','er'); }
+            }).catch(function(){ tst('خطأ في الحفظ','er'); });
+        };
+        if(taxNo && !supId){
+            if(confirm('المورد غير م registrado. إضافته الآن؟')){
+                var nm=prompt('اسم المورد:');
+                if(nm){
+                    D.suppliers.push({id:nextId(D.suppliers), name:nm, taxNo:taxNo, phone:'', email:'', active:true});
+                    supId=String(D.suppliers[D.suppliers.length-1].id);
+                    saveLocal();
+                    syncSuppliersToServer().then(function(){ doSave(); });
+                }
+            }
+        } else { doSave(); }
+    }
+
+    // ===== تعديل فاتورة =====
+    function editInv(id){ var p=null; D.purchases.forEach(function(x){ if(Number(x.id)===id) p=x; }); if(!p) return; var el=document.getElementById('p-invs'); if(!el) return; var io=p.costCenter && !CSOPTS.some(function(g){ return g.v.indexOf(p.costCenter)>-1; }); var isTax=p.invoiceType==='فاتورة ضريبية'; var supObj=p.supplierName?getSupplierById(p.supplierName):null; var savedTaxNo=supObj && supObj.taxNo ? supObj.taxNo : (p.supplierTaxNo||''); var savedSupName=supObj?supObj.name:''; var h='<div class="card"><div class="card-header"><h3>✏️ تعديل فاتورة #'+id+'</h3><button class="btn btn-gray btn-sm" onclick="renderInvs()">✕</button></div><div class="card-body-pad">'; h+='<div class="form-grid"><div class="form-group"><label class="form-label">الإجمالي</label><input class="form-input" id="ePAmt" type="number" step="0.01" value="'+p.amount+'" oninput="calcEditTax()"></div>'; h+='<div class="form-group"><label class="form-label">الضريبة</label><input class="form-input" id="ePTax" value="'+(p.taxAmount||0)+'"></div>'; h+='<div class="form-group"><label class="form-label">خاضع</label><input class="form-input" id="ePTaxable" value="'+(p.taxableAmount||0)+'"></div></div>'; h+='<div class="form-grid"><div class="form-group"><label class="form-label">رقم</label><input class="form-input" id="ePNo" value="'+addslashes(p.invoiceNo||'')+'"></div>'; h+='<div class="form-group"><label class="form-label">النوع</label><select class="form-input" id="ePType" onchange="calcEditTax();toggleEditTaxFields()"><option>فاتورة عادية</option><option>فاتورة ضريبية</option><option>سند قبض</option><option>إيصال</option><option>أخرى</option></select></div></div>'; h+='<div class="form-grid"><div class="form-group"><label class="form-label">🔢 الرقم الضريبي</label><input class="form-input" id="ePNewTaxNo" placeholder="أدخل الرقم الضريبي..." value="'+savedTaxNo+'" style="direction:ltr;font-family:monospace;font-size:14px;font-weight:700;text-align:center;letter-spacing:1px" oninput="onEditInvTaxNoInput()" onblur="onEditInvTaxNoBlur()"></div>'; h+='<div class="form-group"><label class="form-label">🏪 اسم المورد (تلقائي)</label><input class="form-input" id="ePNewSupName" readonly value="'+addslashes(savedSupName)+'" style="'+(savedSupName?'font-weight:700;border-color:#059669;background:#f0fdf4':'')+'"></div></div>'; h+='<input type="hidden" id="ePNewSupId" value="'+(p.supplierName||'')+'">'; h+='<div id="editTaxFields" style="display:'+(isTax?'block':'none')+'"><div class="form-grid"><div class="form-group"><label class="form-label">🏢 الشركة</label><select class="form-input" id="ePCompany">'+buildCompanyOpts(p.companyId)+'</select></div><div class="form-group"></div></div></div>'; h+='<div class="form-grid"><div class="form-group"><label class="form-label">اسم المورد (يدوي)</label><input class="form-input" id="ePVendor" value="'+addslashes(p.vendorName||'')+'" placeholder="اكتب اسم المورد يدوياً"></div>'; h+='<div class="form-group"><label class="form-label">التوجيه</label><select class="form-input" id="ePDir">'+buildDirOpts(p.direction)+'</select></div></div>'; h+='<div class="form-grid"><div class="form-group"><label class="form-label">مركز التكلفة</label><select class="form-input" id="ePCC" onchange="togCC(this,\'ePOther\')">'+buildCCOpts(io?'':p.costCenter)+'</select></div>'; h+='<div class="form-group" id="ePOtherDiv" style="display:'+(io?'block':'none')+'"><label class="form-label">حدد</label><input class="form-input" id="ePOther" value="'+addslashes(io?p.costCenter:'')+'"></div>'; h+='<div class="form-group"><label class="form-label">التاريخ</label><input class="form-input" id="ePDate" type="date" value="'+(p.date||'')+'"></div></div>'; h+='<div class="form-grid"><div class="form-group"><label class="form-label">البيان</label><input class="form-input" id="ePDesc" value="'+addslashes(p.desc||'')+'"></div>'; h+='<div class="form-group"><label class="form-label">ملاحظات</label><input class="form-input" id="ePNotes" value="'+addslashes(p.notes||'')+'"></div></div>'; h+='<button class="btn btn-primary" onclick="saveEditInv('+id+')" style="width:100%;justify-content:center;padding:10px">💾 حفظ</button></div></div>'; el.innerHTML=h; try{ $('ePType').value = p.invoiceType || 'فاتورة عادية'; } catch(e){} }
+
+    function onEditInvTaxNoInput(){ onTaxNoInput('ePNewTaxNo','ePNewSupName','ePNewSupId'); }
+    function onEditInvTaxNoBlur(){ onTaxNoBlur('ePNewTaxNo','ePNewSupName','ePNewSupId'); }
+    function toggleEditTaxFields(){ var tf=document.getElementById('editTaxFields'); if(!tf) return; var tp=$('ePType'); if(!tp) return; tf.style.display=tp.value==='فاتورة ضريبية'?'block':'none'; }
+    function calcEditTax(){ var a=Number($('ePAmt').value)||0, t=$('ePType').value, r=calcTaxFor(a,t); var el; el=$('ePTax'); if(el) el.value=r.tax; el=$('ePTaxable'); if(el) el.value=r.taxable; }
+
+    function saveEditInv(id){
+        var supId=$('ePNewSupId')?$('ePNewSupId').value:'';
+        var taxNo=$('ePNewTaxNo')?$('ePNewTaxNo').value.trim():'';
+        var vendorName=$('ePVendor')?$('ePVendor').value.trim():'';
+        var direction=$('ePDir')?$('ePDir').value:'';
+        var doSave = function(){
+            var updateData = {
+                amount:Number($('ePAmt').value),
+                taxableAmount:Number($('ePTaxable')?$('ePTaxable').value:0),
+                taxAmount:Number($('ePTax')?$('ePTax').value:0),
+                invoiceType:$('ePType').value,
+                invoiceNo:$('ePNo').value,
+                costCenter:getCCVal('ePCC','ePOther'),
+                desc:$('ePDesc').value,
+                date:$('ePDate').value,
+                notes:$('ePNotes').value,
+                supplierName:supId,
+                supplierTaxNo:taxNo,
+                companyId:$('ePCompany')?$('ePCompany').value:'',
+                vendorName:vendorName,
+                direction:direction
+            };
+            srv('srvUpdatePurchase', id, updateData).then(function(r){
+                if(r && r.success){
+                    D.purchases.forEach(function(p){ if(Number(p.id)===id) Object.keys(updateData).forEach(function(k){ p[k] = updateData[k]; }); });
+                    saveLocal(); updateStats(); renderInvs();
+                    tst('تم التعديل','ok');
+                } else { tst('فشل','er'); }
+            }).catch(function(){ tst('خطأ','er'); });
+        };
+        if(taxNo && !supId){
+            if(confirm('المورد غير مسجل. إضافته؟')){
+                var nm=prompt('اسم المورد:');
+                if(nm){
+                    D.suppliers.push({id:nextId(D.suppliers), name:nm, taxNo:taxNo, phone:'', email:'', active:true});
+                    supId=String(D.suppliers[D.suppliers.length-1].id);
+                    saveLocal();
+                    syncSuppliersToServer().then(function(){ doSave(); });
+                }
+            }
+        } else { doSave(); }
+    }
+
+    function delInv(id){ if(!confirm('حذف الفاتورة #'+id+'؟')) return; srv('srvDeletePurchase', id).then(function(r){ if(r && r.success){ tst('تم الحذف','ok'); loadData(); } else { tst('فشل','er'); } }).catch(function(){ tst('خطأ','er'); }); }
+
+    function moveInv(id){ var p=null; D.purchases.forEach(function(x){ if(Number(x.id)===id) p=x; }); if(!p) return; var currentAdv=Number(p.advId); var h='<div class="move-box"><span style="font-size:11px;font-weight:700;color:#3b82f6">📦 نقل فاتورة #'+id+'</span>'; h+='<select class="form-input" id="moveTgt'+id+'" style="margin:0;flex:1;max-width:250px">'; var hasOpts=false; D.advances.forEach(function(a){ if(a.status!=='settled' && Number(a.id)!==currentAdv){ var rn=getRepName(a.repId); h+='<option value="'+a.id+'">#'+a.id+' — '+rn+'</option>'; hasOpts=true; } }); h+='</select>'; if(hasOpts) h+='<button class="btn btn-blue btn-sm" onclick="doMoveInv('+id+')">📦</button>'; else h+='<span style="font-size:10px;color:#ef4444">لا توجد عهد</span>'; h+='<button class="btn btn-gray btn-sm" onclick="renderInvs()">✕</button></div>'; document.getElementById('moveContent'+id).innerHTML = h; document.getElementById('moveArea'+id).style.display = ''; }
+    function doMoveInv(id){ var tgt=Number($('moveTgt'+id).value); if(!tgt){ alert('اختر العهدة'); return; } if(!confirm('نقل فاتورة #'+id+' إلى العهدة #'+tgt+'؟')) return; srv('srvUpdatePurchase', id, {advId:tgt}).then(function(r){ if(r && r.success){ tst('تم نقل الفاتورة','ok'); loadData(); } else { tst('فشل','er'); } }).catch(function(){ tst('خطأ','er'); }); }
+
+    // ===== تصدير فواتير Excel =====
+    function exportInvsExcel(){
+        if(typeof XLSX === 'undefined'){ tst('مكتبة XLSX غير محملة','er'); return; }
+        var ws_data = [['#','المندوب','رقم الفاتورة','المورد','الإجمالي','خاضع الضريبة','الضريبة','النوع','البيان','مركز التكلفة','التوجيه','التاريخ','ملاحظات']];
+        var sorted = sortByDesc(D.purchases);
+        sorted.forEach(function(p){
+            ws_data.push([
+                p.id,
+                getAdvRepName(p.advId),
+                p.invoiceNo || '',
+                getSupDisplay(p),
+                Number(p.amount)||0,
+                Number(p.taxableAmount)||0,
+                Number(p.taxAmount)||0,
+                p.invoiceType || '',
+                p.desc || '',
+                p.costCenter || '',
+                p.direction || '',
+                p.date || '',
+                p.notes || ''
+            ]);
+        });
+        var ws = XLSX.utils.aoa_to_sheet(ws_data);
+        var wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'الفواتير');
+        XLSX.writeFile(wb, 'فواتير_بستان_العجوة_' + new Date().toISOString().split('T')[0] + '.xlsx');
+        tst('تم تصدير Excel','ok');
+    }
+
+    // ===== إدخال يدوي (30 سطر) =====
+    function addManual(){
+        MANUAL_ENTRY_ACTIVE = true;
+        var el = document.getElementById('p-invs'); if(!el) return;
+        var ao = ''; D.advances.forEach(function(a){ if(a.status!=='settled'){ var rn=getRepName(a.repId); ao+='<option value="'+a.id+'">#'+a.id+' - '+rn+'</option>'; } });
+        var h = '<div class="card"><div class="card-header"><h3>📝 إدخال يدوي (30 سطر)</h3><div><button class="btn btn-green btn-sm" onclick="saveManualBatch()">💾 حفظ الكل</button> <button class="btn btn-gray btn-sm" onclick="cancelManual()">✕</button></div></div><div class="card-body-pad">';
+        h += '<div class="form-grid"><div class="form-group"><label class="form-label">العهدة (للكل)</label><select class="form-input" id="mAdv">'+ao+'</select></div>';
+        h += '<div class="form-group"><label class="form-label">نوع الفاتورة (للكل)</label><select class="form-input" id="mType"><option>فاتورة عادية</option><option>فاتورة ضريبية</option></select></div></div>';
+        h += '<div style="overflow-x:auto"><table class="dt" id="manualTable"><thead><tr>';
+        h += '<th>#</th><th>رقم الفاتورة</th><th>الإجمالي</th><th>الضريبة</th><th>خاضع</th><th>البيان</th><th>مركز التكلفة</th><th>التاريخ</th></tr></thead><tbody>';
+        for(var i=0; i<30; i++){
+            h += '<tr><td>'+(i+1)+'</td>';
+            h += '<td><input class="form-input fi-tbl" id="mNo'+i+'"></td>';
+            h += '<td><input class="form-input fi-tbl" id="mAmt'+i+'" type="number" step="0.01" oninput="calcManualTax('+i+')"></td>';
+            h += '<td><input class="form-input fi-tbl" id="mTax'+i+'" readonly></td>';
+            h += '<td><input class="form-input fi-tbl" id="mTxbl'+i+'" readonly></td>';
+            h += '<td><input class="form-input fi-tbl" id="mDesc'+i+'"></td>';
+            h += '<td><select class="form-input fi-tbl" id="mCC'+i+'">'+buildCCOpts()+'</select></td>';
+            h += '<td><input class="form-input fi-tbl" id="mDate'+i+'" type="date" value="'+new Date().toISOString().split('T')[0]+'"></td></tr>';
+        }
+        h += '</tbody></table></div></div></div>';
+        el.innerHTML = h;
+    }
+
+    function calcManualTax(i){
+        var a = Number($('mAmt'+i).value)||0, t = $('mType').value;
+        var r = calcTaxFor(a, t);
+        $('mTax'+i).value = r.tax;
+        $('mTxbl'+i).value = r.taxable;
+    }
+
+    function saveManualBatch(){
+        var advId = Number($('mAdv').value);
+        var invType = $('mType').value;
+        if(!advId){ alert('اختر العهدة'); return; }
+        var items = [];
+        for(var i=0; i<30; i++){
+            var amt = Number($('mAmt'+i).value)||0;
+            if(amt <= 0) continue;
+            items.push({
+                advId: advId,
+                amount: amt,
+                taxableAmount: Number($('mTxbl'+i).value)||0,
+                taxAmount: Number($('mTax'+i).value)||0,
+                invoiceType: invType,
+                invoiceNo: $('mNo'+i).value,
+                costCenter: $('mCC'+i).value,
+                desc: $('mDesc'+i).value,
+                date: $('mDate'+i).value,
+                notes: ''
+            });
+        }
+        if(!items.length){ alert('لا توجد بيانات'); return; }
+        if(!confirm('حفظ '+items.length+' فاتورة؟')) return;
+        tst('جاري حفظ '+items.length+' فاتورة...','inf');
+        var done = 0;
+        items.forEach(function(item, idx){
+            srv('srvAddPurchase', item).then(function(r){
+                if(r && r.success){
+                    D.purchases.push(Object.assign({id:r.id}, item));
+                    done++;
+                }
+                if(done + (items.length - done - 1) >= items.length || idx === items.length-1){
+                    // 마지막 항목 처리 후
+                }
+                if(idx === items.length-1){
+                    saveLocal(); updateStats(); renderInvs();
+                    tst('تم حفظ '+done+' فاتورة','ok');
+                    MANUAL_ENTRY_ACTIVE = false;
+                }
+            }).catch(function(){
+                if(idx === items.length-1){
+                    saveLocal(); updateStats(); renderInvs();
+                    tst('تم حفظ '+done+' من '+items.length,'ok');
+                    MANUAL_ENTRY_ACTIVE = false;
+                }
+            });
+        });
+    }
+
+    function cancelManual(){ MANUAL_ENTRY_ACTIVE = false; renderInvs(); }
+
+    // ============================================================
+    // ===== المصروفات (مكتملة) =====
+    // ============================================================
+    function renderExps(){
+        var el = document.getElementById('p-exps'); if(!el) return;
+        var h = '<div class="card"><div class="card-header"><h3>📄 المصروفات بدون فواتير ('+D.expenses.length+')</h3><button class="btn btn-green btn-sm" onclick="addExp()">➕ إضافة</button></div>';
+        h += '<div class="card-body"><table class="dt"><thead><tr><th>#</th><th>المندوب</th><th>المبلغ</th><th>البيان</th><th>التاريخ</th><th>مركز التكلفة</th><th>ملاحظة المدير</th><th>الحالة</th><th>⚗️</th></tr></thead><tbody>';
+        var sorted = sortByDesc(D.expenses);
+        sorted.forEach(function(x){
+            var rn = getRepName(x.repId);
+            var st = x.status==='approved' ? '<span class="badge badge-green">موافق</span>' : x.status==='rejected' ? '<span class="badge badge-red">مرفوض</span>' : '<span class="badge badge-amber">بانتظار</span>';
+            h += '<tr><td>'+x.id+'</td><td>'+rn+'</td><td>'+f(x.amount)+'</td><td>'+(x.desc||'-')+'</td><td>'+fd(x.date)+'</td><td>'+(x.costCenter||'-')+'</td><td style="font-size:10px;color:#64748b">'+(x.managerNotes||'-')+'</td><td>'+st+'</td>';
+            h += '<td><button class="btn btn-blue btn-sm" onclick="editExp('+x.id+')">✏️</button>';
+            if(isAdmin() && x.status!=='approved') h += ' <button class="btn btn-green btn-sm" onclick="approveExp('+x.id+')">✅</button>';
+            if(isAdmin() && x.status!=='rejected') h += ' <button class="btn btn-orange btn-sm" onclick="rejectExp('+x.id+')">❌</button>';
+            h += ' <button class="btn btn-red btn-sm" onclick="delExp('+x.id+')">🗑️</button></td></tr>';
+        });
+        if(!D.expenses.length) h += '<tr><td colspan="9" class="empty-state">لا توجد مصروفات</td></tr>';
+        h += '</tbody></table></div></div>';
+        el.innerHTML = h;
+    }
+
+    function addExp(){
+        var el = document.getElementById('p-exps'); if(!el) return;
+        var ro = '<option value="">-- اختر --</option>';
+        D.reps.forEach(function(r){ if(r.active===true || r.active==='true') ro+='<option value="'+r.id+'">'+r.name+'</option>'; });
+        var h = '<div class="card"><div class="card-header"><h3>➕ مصروف جديد</h3><button class="btn btn-gray btn-sm" onclick="renderExps()">✕</button></div><div class="card-body-pad">';
+        h += '<div class="form-grid"><div class="form-group"><label class="form-label">المندوب</label><select class="form-input" id="nERep">'+ro+'</select></div>';
+        h += '<div class="form-group"><label class="form-label">العهدة (اختياري)</label><select class="form-input" id="nEAdv"><option value="">-- بدون --</option></select></div></div>';
+        h += '<div class="form-grid"><div class="form-group"><label class="form-label">المبلغ</label><input class="form-input" id="nEAmt" type="number" step="0.01"></div>';
+        h += '<div class="form-group"><label class="form-label">التاريخ</label><input class="form-input" id="nEDate" type="date" value="'+new Date().toISOString().split('T')[0]+'"></div></div>';
+        h += '<div class="form-grid"><div class="form-group"><label class="form-label">البيان</label><input class="form-input" id="nEDesc"></div>';
+        h += '<div class="form-group"><label class="form-label">مركز التكلفة</label><select class="form-input" id="nECC" onchange="togCC(this,\'nEOther\')">'+buildCCOpts()+'</select></div></div>';
+        h += '<div class="form-group" id="nEOtherDiv" style="display:none"><label class="form-label">حدد</label><input class="form-input" id="nEOther"></div>';
+        h += '<div class="form-group"><label class="form-label">ملاحظات المندوب</label><input class="form-input" id="nENotes"></div>';
+        h += '<button class="btn btn-primary" onclick="saveNewExp()" style="width:100%;justify-content:center;padding:10px">💾 حفظ</button></div></div>';
+        el.innerHTML = h;
+        // تحديث العهد عند تغيير المندوب
+        $('nERep').onchange = function(){
+            var rid = Number(this.value);
+            var advOpts = '<option value="">-- بدون --</option>';
+            D.advances.forEach(function(a){ if(Number(a.repId)===rid && a.status!=='settled') advOpts+='<option value="'+a.id+'">#'+a.id+'</option>'; });
+            $('nEAdv').innerHTML = advOpts;
+        };
+    }
+
+    function saveNewExp(){
+        var repId = Number($('nERep').value);
+        var amt = parseFloat($('nEAmt').value);
+        if(!repId || isNaN(amt)){ alert('أدخل البيانات'); return; }
+        var exp = {
+            repId: repId,
+            advId: Number($('nEAdv').value)||0,
+            amount: amt,
+            desc: $('nEDesc').value,
+            date: $('nEDate').value,
+            costCenter: getCCVal('nECC','nEOther'),
+            accountantNotes: $('nENotes').value,
+            managerNotes: '',
+            status: 'pending',
+            actionDate: ''
+        };
+        srv('srvAddExpenses', [exp]).then(function(r){
+            if(r && r.success){
+                exp.id = nextId(D.expenses);
+                D.expenses.push(exp);
+                saveLocal(); updateStats(); renderExps();
+                tst('تمت الإضافة','ok');
+            } else { tst('فشل','er'); }
+        }).catch(function(){ tst('خطأ','er'); });
+    }
+
+    function editExp(id){
+        var x = null; D.expenses.forEach(function(e){ if(Number(e.id)===id) x=e; });
+        if(!x) return;
+        var el = document.getElementById('p-exps'); if(!el) return;
+        var ro = '<option value="">-- اختر --</option>';
+        D.reps.forEach(function(r){ ro+='<option value="'+r.id+'"'+(Number(r.id)===Number(x.repId)?' selected':'')+'>'+r.name+'</option>'; });
+        var h = '<div class="card"><div class="card-header"><h3>✏️ تعديل مصروف #'+id+'</h3><button class="btn btn-gray btn-sm" onclick="renderExps()">✕</button></div><div class="card-body-pad">';
+        h += '<div class="form-grid"><div class="form-group"><label class="form-label">المندوب</label><select class="form-input" id="eERep">'+ro+'</select></div>';
+        h += '<div class="form-group"><label class="form-label">المبلغ</label><input class="form-input" id="eEAmt" type="number" step="0.01" value="'+x.amount+'"></div></div>';
+        h += '<div class="form-grid"><div class="form-group"><label class="form-label">التاريخ</label><input class="form-input" id="eEDate" type="date" value="'+(x.date||'')+'"></div>';
+        h += '<div class="form-group"><label class="form-label">مركز التكلفة</label><select class="form-input" id="eECC">'+buildCCOpts(x.costCenter)+'</select></div></div>';
+        h += '<div class="form-group"><label class="form-label">البيان</label><input class="form-input" id="eEDesc" value="'+addslashes(x.desc||'')+'"></div>';
+        h += '<div class="form-group"><label class="form-label">ملاحظة المدير</label><input class="form-input" id="eEMgr" value="'+addslashes(x.managerNotes||'')+'"></div>';
+        h += '<div class="form-group"><label class="form-label">الحالة</label><select class="form-input" id="eEStatus"><option value="pending"'+(x.status==='pending'?' selected':'')+'>بانتظار</option><option value="approved"'+(x.status==='approved'?' selected':'')+'>موافق</option><option value="rejected"'+(x.status==='rejected'?' selected':'')+'>مرفوض</option></select></div>';
+        h += '<button class="btn btn-primary" onclick="saveEditExp('+id+')" style="width:100%;justify-content:center;padding:10px">💾 حفظ</button></div></div>';
+        el.innerHTML = h;
+    }
+
+    function saveEditExp(id){
+        var update = {
+            repId: Number($('eERep').value),
+            amount: Number($('eEAmt').value),
+            date: $('eEDate').value,
+            costCenter: $('eECC').value,
+            desc: $('eEDesc').value,
+            managerNotes: $('eEMgr').value,
+            status: $('eEStatus').value,
+            actionDate: new Date().toISOString().split('T')[0]
+        };
+        srv('srvUpdateExpense', id, update).then(function(r){
+            if(r && r.success){
+                D.expenses.forEach(function(e){ if(Number(e.id)===id) Object.keys(update).forEach(function(k){ e[k]=update[k]; }); });
+                saveLocal(); updateStats(); renderExps();
+                tst('تم التعديل','ok');
+            } else { tst('فشل','er'); }
+        }).catch(function(){ tst('خطأ','er'); });
+    }
+
+    function approveExp(id){
+        srv('srvUpdateExpense', id, {status:'approved', actionDate:new Date().toISOString().split('T')[0]}).then(function(r){
+            if(r && r.success){
+                D.expenses.forEach(function(e){ if(Number(e.id)===id){ e.status='approved'; e.actionDate=new Date().toISOString().split('T')[0]; }});
+                saveLocal(); renderExps(); tst('تمت الموافقة','ok');
+            } else { tst('فشل','er'); }
+        }).catch(function(){ tst('خطأ','er'); });
+    }
+
+    function rejectExp(id){
+        var notes = prompt('سبب الرفض (اختياري):');
+        srv('srvUpdateExpense', id, {status:'rejected', managerNotes:notes||'', actionDate:new Date().toISOString().split('T')[0]}).then(function(r){
+            if(r && r.success){
+                D.expenses.forEach(function(e){ if(Number(e.id)===id){ e.status='rejected'; e.managerNotes=notes||''; e.actionDate=new Date().toISOString().split('T')[0]; }});
+                saveLocal(); renderExps(); tst('تم الرفض','ok');
+            } else { tst('فشل','er'); }
+        }).catch(function(){ tst('خطأ','er'); });
+    }
+
+    function delExp(id){ if(!confirm('حذف المصروف؟')) return; D.expenses = D.expenses.filter(function(x){ return Number(x.id)!==id; }); saveAndRefresh(); tst('تم الحذف','ok'); }
+
+    // ============================================================
+    // ===== قسم الضريبة (مكتمل) =====
+    // ============================================================
+    function renderTax(){
+        var el = document.getElementById('p-tax'); if(!el) return;
+        var taxInvs = D.purchases.filter(function(p){ return p.invoiceType === 'فاتورة ضريبية'; });
+        var totalTax=0, totalTaxable=0, totalAmount=0;
+        taxInvs.forEach(function(p){ totalTax += Number(p.taxAmount||0); totalTaxable += Number(p.taxableAmount||0); totalAmount += Number(p.amount||0); });
+
+        var html = '<div class="card"><div class="card-header"><h3>🏛️ قسم الضريبة</h3><div><button class="btn btn-purple btn-sm" onclick="exportTaxExcel()">📊 تصدير Excel</button></div></div><div class="card-body-pad">';
+
+        // إحصائيات
+        html += '<div class="tax-summary">';
+        html += '<div class="tax-summary-box t1"><div class="tsb-val">'+f(totalTax)+'</div><div class="tsb-lbl">إجمالي الضريبة</div></div>';
+        html += '<div class="tax-summary-box t2"><div class="tsb-val">'+f(totalTaxable)+'</div><div class="tsb-lbl">إجمالي الخاضع</div></div>';
+        html += '<div class="tax-summary-box t3"><div class="tsb-val">'+f(totalAmount)+'</div><div class="tsb-lbl">إجمالي الفواتير الضريبية</div></div>';
+        html += '<div class="tax-summary-box t4"><div class="tsb-val">'+taxInvs.length+'</div><div class="tsb-lbl">عدد الفواتير</div></div>';
+        html += '</div>';
+
+        // تبويبات
+        html += '<div class="tax-tabs">';
+        html += '<button class="tax-tab '+(TAX_TAB==='invoices'?'on':'')+'" onclick="TAX_TAB=\'invoices\';renderTax()">📋 الفواتير الضريبية</button>';
+        html += '<button class="tax-tab '+(TAX_TAB==='companies'?'on':'')+'" onclick="TAX_TAB=\'companies\';renderTax()">🏢 حسب الشركة</button>';
+        html += '<button class="tax-tab '+(TAX_TAB==='suppliers'?'on':'')+'" onclick="TAX_TAB=\'suppliers\';renderTax()">🏭 حسب المورد</button>';
+        html += '<button class="tax-tab '+(TAX_TAB==='costcenter'?'on':'')+'" onclick="TAX_TAB=\'costcenter\';renderTax()">📊 حسب مركز التكلفة</button>';
+        html += '</div>';
+
+        // تبويب الفواتير
+        if(TAX_TAB==='invoices'){
+            html += '<div class="tax-sub on"><table class="dt"><thead><tr><th>#</th><th>المندوب</th><th>رقم الفاتورة</th><th>المورد</th><th>الإجمالي</th><th>خاضع</th><th>الضريبة</th><th>الشركة</th><th>التاريخ</th></tr></thead><tbody>';
+            sortByDesc(taxInvs).forEach(function(p){
+                var rn=getAdvRepName(p.advId);
+                var sup=getSupDisplay(p);
+                var comp=p.companyId?getCompanyById(p.companyId):null;
+                var cn=comp?comp.name:'-';
+                html+='<tr><td style="color:#d97706;font-weight:700">#'+p.id+'</td><td>'+rn+'</td><td>'+(p.invoiceNo||'-')+'</td><td style="font-weight:600">'+sup+'</td><td style="font-weight:700">'+f(p.amount)+'</td><td style="color:#3b82f6">'+f(p.taxableAmount)+'</td><td style="color:#ef4444;font-weight:700">'+f(p.taxAmount)+'</td><td>'+cn+'</td><td>'+fd(p.date)+'</td></tr>';
+            });
+            if(!taxInvs.length) html+='<tr><td colspan="9" class="empty-state">لا توجد فواتير ضريبية</td></tr>';
+            html += '</tbody><tfoot><tr><td colspan="4">الإجمالي</td><td style="font-weight:900;color:#059669">'+f(totalAmount)+'</td><td style="font-weight:900;color:#3b82f6">'+f(totalTaxable)+'</td><td style="font-weight:900;color:#ef4444">'+f(totalTax)+'</td><td colspan="2"></td></tr></tfoot></table></div>';
+        }
+
+        // تبويب الشركات
+        if(TAX_TAB==='companies'){
+            html += '<div class="tax-sub on">';
+            D.companies.forEach(function(c){
+                var compInvs = taxInvs.filter(function(p){ return String(p.companyId)===String(c.id); });
+                var compTax=0, compTaxable=0, compTotal=0;
+                compInvs.forEach(function(p){ compTax+=Number(p.taxAmount||0); compTaxable+=Number(p.taxableAmount||0); compTotal+=Number(p.amount||0); });
+                html += '<div class="company-card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">';
+                html += '<span style="font-weight:700;font-size:14px;color:#065f46">'+c.name+'</span>';
+                html += '<span class="badge badge-blue">'+compInvs.length+' فواتير</span></div>';
+                html += '<div style="display:flex;gap:16px;font-size:12px;color:#64748b;flex-wrap:wrap">';
+                html += '<span>الرقم الضريبي: <b>'+(c.taxNo||'-')+'</b></span>';
+                html += '<span>الإجمالي: <b>'+f(compTotal)+'</b></span>';
+                html += '<span>الخاضع: <b>'+f(compTaxable)+'</b></span>';
+                html += '<span>الضريبة: <b style="color:#ef4444">'+f(compTax)+'</b></span>';
+                html += '</div></div>';
+            });
+            if(!D.companies.length) html += '<div class="empty-state">لا توجد شركات</div>';
+            // فواتير بدون شركة
+            var noComp = taxInvs.filter(function(p){ return !p.companyId; });
+            if(noComp.length){
+                html += '<div class="company-card" style="border-color:#fca5a5;background:#fef2f2"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-weight:700;color:#dc2626">⚠️ فواتير بدون شركة</span><span class="badge badge-red">'+noComp.length+' فواتير</span></div></div>';
+            }
+            html += '</div>';
+        }
+
+        // تبويب الموردين
+        if(TAX_TAB==='suppliers'){
+            html += '<div class="tax-sub on"><table class="dt"><thead><tr><th>المورد</th><th>الرقم الضريبي</th><th>عدد الفواتير</th><th>الإجمالي</th><th>الخاضع</th><th>الضريبة</th></tr></thead><tbody>';
+            var supMap = {};
+            taxInvs.forEach(function(p){
+                var key = p.supplierName || p.vendorName || 'غير محدد';
+                if(!supMap[key]) supMap[key] = {name:getSupDisplay(p), taxNo:'', count:0, total:0, taxable:0, tax:0};
+                var sup = p.supplierName ? getSupplierById(p.supplierName) : null;
+                if(sup && sup.taxNo) supMap[key].taxNo = sup.taxNo;
+                supMap[key].count++;
+                supMap[key].total += Number(p.amount||0);
+                supMap[key].taxable += Number(p.taxableAmount||0);
+                supMap[key].tax += Number(p.taxAmount||0);
+            });
+            var supArr = Object.values(supMap).sort(function(a,b){ return b.total-a.total; });
+            supArr.forEach(function(s){
+                html+='<tr><td style="font-weight:700">'+s.name+'</td><td style="font-family:monospace;direction:ltr">'+(s.taxNo||'-')+'</td><td>'+s.count+'</td><td>'+f(s.total)+'</td><td>'+f(s.taxable)+'</td><td style="color:#ef4444;font-weight:700">'+f(s.tax)+'</td></tr>';
+            });
+            html += '</tbody></table></div>';
+        }
+
+        // تبويب مراكز التكلفة
+        if(TAX_TAB==='costcenter'){
+            html += '<div class="tax-sub on"><table class="dt"><thead><tr><th>مركز التكلفة</th><th>عدد الفواتير</th><th>الإجمالي</th><th>الخاضع</th><th>الضريبة</th></tr></thead><tbody>';
+            var ccMap = {};
+            taxInvs.forEach(function(p){
+                var key = p.costCenter || 'غير محدد';
+                if(!ccMap[key]) ccMap[key] = {name:key, count:0, total:0, taxable:0, tax:0};
+                ccMap[key].count++;
+                ccMap[key].total += Number(p.amount||0);
+                ccMap[key].taxable += Number(p.taxableAmount||0);
+                ccMap[key].tax += Number(p.taxAmount||0);
+            });
+            var ccArr = Object.values(ccMap).sort(function(a,b){ return b.total-a.total; });
+            ccArr.forEach(function(c){
+                html+='<tr><td style="font-weight:700">'+c.name+'</td><td>'+c.count+'</td><td>'+f(c.total)+'</td><td>'+f(c.taxable)+'</td><td style="color:#ef4444;font-weight:700">'+f(c.tax)+'</td></tr>';
+            });
+            html += '</tbody></table></div>';
+        }
+
+        html += '</div></div>';
+        el.innerHTML = html;
+    }
+
+    function exportTaxExcel(){
+        if(typeof XLSX === 'undefined'){ tst('مكتبة XLSX غير محملة','er'); return; }
+        var taxInvs = D.purchases.filter(function(p){ return p.invoiceType === 'فاتورة ضريبية'; });
+        var ws_data = [['#','المندوب','رقم الفاتورة','المورد','الرقم الضريبي','الشركة','الإجمالي','خاضع الضريبة','الضريبة','مركز التكلفة','التاريخ']];
+        sortByDesc(taxInvs).forEach(function(p){
+            var sup=p.supplierName?getSupplierById(p.supplierName):null;
+            var comp=p.companyId?getCompanyById(p.companyId):null;
+            ws_data.push([p.id, getAdvRepName(p.advId), p.invoiceNo||'', getSupDisplay(p), sup?sup.taxNo:'', comp?comp.name:'', Number(p.amount)||0, Number(p.taxableAmount)||0, Number(p.taxAmount)||0, p.costCenter||'', p.date||'']);
+        });
+        var ws = XLSX.utils.aoa_to_sheet(ws_data);
+        var wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'الفواتير الضريبية');
+        XLSX.writeFile(wb, 'فواتير_ضريبية_' + new Date().toISOString().split('T')[0] + '.xlsx');
+        tst('تم تصدير الفواتير الضريبية','ok');
+    }
+
+    // ============================================================
+    // ===== إدارة الموردين =====
+    // ============================================================
+    function renderSuppliers(){
+        var el = document.getElementById('p-suppliers'); if(!el) return;
+        var h = '<div class="card"><div class="card-header"><h3>🏭 الموردين ('+D.suppliers.length+')</h3><button class="btn btn-green btn-sm" onclick="addSupplier()">➕ إضافة</button></div>';
+        h += '<div class="card-body"><table class="dt"><thead><tr><th>#</th><th>الاسم</th><th>الرقم الضريبي</th><th>الهاتف</th><th>البريد</th><th>الحالة</th><th>⚗️</th></tr></thead><tbody>';
+        sortByDesc(D.suppliers).forEach(function(s){
+            var st = s.active!==false ? '<span class="badge badge-green">نشط</span>' : '<span class="badge badge-red">معطل</span>';
+            h += '<tr><td>'+s.id+'</td><td style="font-weight:700">'+s.name+'</td><td style="font-family:monospace;direction:ltr">'+(s.taxNo||'-')+'</td><td>'+(s.phone||'-')+'</td><td>'+(s.email||'-')+'</td><td>'+st+'</td>';
+            h += '<td><button class="btn btn-blue btn-sm" onclick="editSupplier('+s.id+')">✏️</button> <button class="btn btn-red btn-sm" onclick="toggleSupplier('+s.id+')">'+(s.active!==false?'🔒':'🔓')+'</button></td></tr>';
+        });
+        if(!D.suppliers.length) h += '<tr><td colspan="7" class="empty-state">لا يوجد موردين</td></tr>';
+        h += '</tbody></table></div></div>';
+        el.innerHTML = h;
+    }
+
+    function addSupplier(){
+        var name = prompt('اسم المورد:'); if(!name) return;
+        var taxNo = prompt('الرقم الضريبي:','');
+        var phone = prompt('الهاتف:','');
+        var email = prompt('البريد:','');
+        D.suppliers.push({id:nextId(D.suppliers), name:name, taxNo:taxNo, phone:phone, email:email, active:true});
+        saveAndRefresh(); tst('تمت الإضافة','ok');
+        syncSuppliersToServer();
+    }
+
+    function editSupplier(id){
+        var s = null; D.suppliers.forEach(function(x){ if(Number(x.id)===id) s=x; });
+        if(!s) return;
+        var el = document.getElementById('p-suppliers'); if(!el) return;
+        var h = '<div class="card"><div class="card-header"><h3>✏️ تعديل مورد #'+id+'</h3><button class="btn btn-gray btn-sm" onclick="renderSuppliers()">✕</button></div><div class="card-body-pad">';
+        h += '<div class="form-grid"><div class="form-group"><label class="form-label">الاسم</label><input class="form-input" id="eSName" value="'+addslashes(s.name)+'"></div>';
+        h += '<div class="form-group"><label class="form-label">الرقم الضريبي</label><input class="form-input" id="eSTax" value="'+(s.taxNo||'')+'" style="direction:ltr;font-family:monospace"></div></div>';
+        h += '<div class="form-grid"><div class="form-group"><label class="form-label">الهاتف</label><input class="form-input" id="eSPhone" value="'+(s.phone||'')+'"></div>';
+        h += '<div class="form-group"><label class="form-label">البريد</label><input class="form-input" id="eSEmail" value="'+(s.email||'')+'"></div></div>';
+        h += '<button class="btn btn-primary" onclick="saveSupplier('+id+')" style="width:100%;justify-content:center;padding:10px">💾 حفظ</button></div></div>';
+        el.innerHTML = h;
+    }
+
+    function saveSupplier(id){
+        D.suppliers.forEach(function(s){
+            if(Number(s.id)===id){
+                s.name=$('eSName').value; s.taxNo=$('eSTax').value; s.phone=$('eSPhone').value; s.email=$('eSEmail').value;
+            }
+        });
+        saveAndRefresh(); tst('تم التعديل','ok'); syncSuppliersToServer();
+    }
+
+    function toggleSupplier(id){
+        D.suppliers.forEach(function(s){ if(Number(s.id)===id) s.active = s.active===false ? true : false; });
+        saveAndRefresh(); tst('تم تغيير الحالة','ok'); syncSuppliersToServer();
+    }
+
+    // ============================================================
+    // ===== إدارة الشركات =====
+    // ============================================================
+    function renderCompanies(){
+        var el = document.getElementById('p-companies'); if(!el) return;
+        var h = '<div class="card"><div class="card-header"><h3>🏢 الشركات ('+D.companies.length+')</h3><button class="btn btn-green btn-sm" onclick="addCompany()">➕ إضافة</button></div>';
+        h += '<div class="card-body"><table class="dt"><thead><tr><th>#</th><th>الاسم</th><th>الرقم الضريبي</th><th>السجل</th><th>العنوان</th><th>الحالة</th><th>⚗️</th></tr></thead><tbody>';
+        sortByDesc(D.companies).forEach(function(c){
+            var st = c.active!==false ? '<span class="badge badge-green">نشط</span>' : '<span class="badge badge-red">معطل</span>';
+            h += '<tr><td>'+c.id+'</td><td style="font-weight:700">'+c.name+'</td><td style="font-family:monospace;direction:ltr">'+(c.taxNo||'-')+'</td><td>'+(c.crNo||'-')+'</td><td>'+(c.address||'-')+'</td><td>'+st+'</td>';
+            h += '<td><button class="btn btn-blue btn-sm" onclick="editCompany('+c.id+')">✏️</button> <button class="btn btn-red btn-sm" onclick="toggleCompany('+c.id+')">'+(c.active!==false?'🔒':'🔓')+'</button></td></tr>';
+        });
+        if(!D.companies.length) h += '<tr><td colspan="7" class="empty-state">لا توجد شركات</td></tr>';
+        h += '</tbody></table></div></div>';
+        el.innerHTML = h;
+    }
+
+    function addCompany(){
+        var name = prompt('اسم الشركة:'); if(!name) return;
+        var taxNo = prompt('الرقم الضريبي:','');
+        var crNo = prompt('رقم السجل التجاري:','');
+        var address = prompt('العنوان:','');
+        D.companies.push({id:nextId(D.companies), name:name, taxNo:taxNo, crNo:crNo, address:address, active:true});
+        saveAndRefresh(); tst('تمت الإضافة','ok');
+    }
+
+    function editCompany(id){
+        var c = null; D.companies.forEach(function(x){ if(Number(x.id)===id) c=x; });
+        if(!c) return;
+        var el = document.getElementById('p-companies'); if(!el) return;
+        var h = '<div class="card"><div class="card-header"><h3>✏️ تعديل شركة #'+id+'</h3><button class="btn btn-gray btn-sm" onclick="renderCompanies()">✕</button></div><div class="card-body-pad">';
+        h += '<div class="form-grid"><div class="form-group"><label class="form-label">الاسم</label><input class="form-input" id="eCName" value="'+addslashes(c.name)+'"></div>';
+        h += '<div class="form-group"><label class="form-label">الرقم الضريبي</label><input class="form-input" id="eCTax" value="'+(c.taxNo||'')+'" style="direction:ltr;font-family:monospace"></div></div>';
+        h += '<div class="form-grid"><div class="form-group"><label class="form-label">رقم السجل</label><input class="form-input" id="eCCR" value="'+(c.crNo||'')+'"></div>';
+        h += '<div class="form-group"><label class="form-label">العنوان</label><input class="form-input" id="eCAddr" value="'+addslashes(c.address||'')+'"></div></div>';
+        h += '<button class="btn btn-primary" onclick="saveCompany('+id+')" style="width:100%;justify-content:center;padding:10px">💾 حفظ</button></div></div>';
+        el.innerHTML = h;
+    }
+
+    function saveCompany(id){
+        D.companies.forEach(function(c){
+            if(Number(c.id)===id){
+                c.name=$('eCName').value; c.taxNo=$('eCTax').value; c.crNo=$('eCCR').value; c.address=$('eCAddr').value;
+            }
+        });
+        saveAndRefresh(); tst('تم التعديل','ok');
+    }
+
+    function toggleCompany(id){
+        D.companies.forEach(function(c){ if(Number(c.id)===id) c.active = c.active===false ? true : false; });
+        saveAndRefresh(); tst('تم تغيير الحالة','ok');
+    }
+
+    // ============================================================
+    // ===== إدارة المستخدمين =====
+    // ============================================================
+    function renderUsers(){
+        var el = document.getElementById('p-users'); if(!el) return;
+        var h = '<div class="card"><div class="card-header"><h3>👤 المستخدمين ('+D.users.length+')</h3><button class="btn btn-green btn-sm" onclick="addUser()">➕ إضافة</button></div>';
+        h += '<div class="card-body"><table class="dt"><thead><tr><th>#</th><th>اسم المستخدم</th><th>الدور</th><th>الاسم</th><th>الحالة</th><th>⚗️</th></tr></thead><tbody>';
+        D.users.forEach(function(u){
+            var st = u.active===true || u.active==='true' ? '<span class="badge badge-green">نشط</span>' : '<span class="badge badge-red">معطل</span>';
+            h += '<tr><td>'+u.id+'</td><td>'+u.username+'</td><td>'+(u.role||'-')+'</td><td>'+(u.name||'-')+'</td><td>'+st+'</td>';
+            h += '<td><button class="btn btn-blue btn-sm" onclick="editUser('+u.id+')">✏️</button> <button class="btn btn-red btn-sm" onclick="toggleUser('+u.id+')">'+(u.active?'🔒':'🔓')+'</button></td></tr>';
+        });
+        if(!D.users.length) h += '<tr><td colspan="6" class="empty-state">لا يوجد مستخدمين</td></tr>';
+        h += '</tbody></table></div></div>';
+        el.innerHTML = h;
+    }
+
+    function addUser(){ var username=prompt('اسم المستخدم:'); if(!username) return; var password=prompt('كلمة المرور:'); if(!password) return; var role=prompt('الدور (admin/all/tax/add):','add'); var name=prompt('الاسم:'); D.users.push({id:nextId(D.users), username:username, password:password, role:role||'add', name:name||username, active:true}); saveAndRefresh(); tst('تم إضافة المستخدم','ok'); }
+
+    function editUser(id){
+        var u = null; D.users.forEach(function(x){ if(Number(x.id)===id) u=x; });
+        if(!u) return;
+        var el = document.getElementById('p-users'); if(!el) return;
+        var h = '<div class="card"><div class="card-header"><h3>✏️ تعديل مستخدم #'+id+'</h3><button class="btn btn-gray btn-sm" onclick="renderUsers()">✕</button></div><div class="card-body-pad">';
+        h += '<div class="form-grid"><div class="form-group"><label class="form-label">اسم المستخدم</label><input class="form-input" id="eUUsername" value="'+addslashes(u.username)+'"></div>';
+        h += '<div class="form-group"><label class="form-label">كلمة المرور</label><input class="form-input" id="eUPass" value="'+addslashes(u.password)+'"></div></div>';
+        h += '<div class="form-grid"><div class="form-group"><label class="form-label">الدور</label><select class="form-input" id="eURole"><option value="admin"'+(u.role==='admin'?' selected':'')+'>مدير</option><option value="all"'+(u.role==='all'?' selected':'')+'>صلاحيات كاملة</option><option value="tax"'+(u.role==='tax'?' selected':'')+'>ضريبة</option><option value="add"'+(u.role==='add'?' selected':'')+'>إدخال فقط</option></select></div>';
+        h += '<div class="form-group"><label class="form-label">الاسم</label><input class="form-input" id="eUName" value="'+addslashes(u.name||'')+'"></div></div>';
+        h += '<button class="btn btn-primary" onclick="saveUser('+id+')" style="width:100%;justify-content:center;padding:10px">💾 حفظ</button></div></div>';
+        el.innerHTML = h;
+    }
+
+    function saveUser(id){
+        D.users.forEach(function(u){
+            if(Number(u.id)===id){
+                u.username=$('eUUsername').value; u.password=$('eUPass').value; u.role=$('eURole').value; u.name=$('eUName').value;
+            }
+        });
+        saveAndRefresh(); tst('تم التعديل','ok');
+    }
+
+    function toggleUser(id){ D.users.forEach(function(u){ if(Number(u.id)===id) u.active = !u.active; }); saveAndRefresh(); tst('تم تغيير الحالة','ok'); }
+
+    // ============================================================
+    // ===== الروابط =====
+    // ============================================================
+    function renderShare(){
+        var el = document.getElementById('p-share'); if(!el) return;
+        var url = window.location.href.split('?')[0];
+        el.innerHTML = '<div class="card"><div class="card-header"><h3>🔗 روابط النظام</h3></div><div class="card-body-pad">' +
+            '<div class="form-group"><label class="form-label">رابط لوحة التحكم</label><input class="form-input" value="'+url+'?page=admin" readonly onclick="this.select();navigator.clipboard?.writeText(this.value)"></div>' +
+            '<div class="form-group"><label class="form-label">رابط المندوب</label><input class="form-input" value="'+url+'?page=rep" readonly onclick="this.select();navigator.clipboard?.writeText(this.value)"></div>' +
+            '<div class="form-group"><label class="form-label">رابط التقارير</label><input class="form-input" value="'+url+'?page=report" readonly onclick="this.select();navigator.clipboard?.writeText(this.value)"></div>' +
+            '<div class="form-group"><label class="form-label">رابط تقرير العهد</label><input class="form-input" value="'+url+'?page=report2" readonly onclick="this.select();navigator.clipboard?.writeText(this.value)"></div>' +
+            '</div></div>';
+    }
+
+    // ============================================================
+    // ===== النسخ الاحتياطي والاستيراد (مصحح) =====
+    // ============================================================
+    function renderBackup(){
+        var el = document.getElementById('p-backup'); if(!el) return;
+        el.innerHTML = '<div class="card"><div class="card-header"><h3>💾 النسخ الاحتياطي والاستيراد</h3></div><div class="card-body-pad">' +
+            '<div class="backup-grid">' +
+            '<button class="btn btn-primary" onclick="exportData()" style="justify-content:center;padding:10px">📤 تصدير JSON إلى Drive</button>' +
+            '<button class="btn btn-blue" onclick="exportAllExcel()" style="justify-content:center;padding:10px">📊 تصدير Excel شامل</button>' +
+            '</div>' +
+            '<div style="margin-top:12px;border-top:1px solid #e2e8f0;padding-top:12px">' +
+            '<label class="form-label" style="text-align:center;display:block;margin-bottom:8px">📥 استيراد من ملف JSON (من جهازك)</label>' +
+            '<input type="file" id="fileInput" accept=".json" style="display:block;margin:0 auto;padding:8px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;width:100%;font-family:\'Tajawal\',sans-serif">' +
+            '<button class="btn btn-green" onclick="uploadFile()" style="width:100%;justify-content:center;padding:10px;margin-top:8px">📤 رفع واستيراد</button>' +
+            '</div>' +
+            '<div style="margin-top:12px;border-top:1px solid #e2e8f0;padding-top:12px">' +
+            '<div class="form-grid"><div class="form-group"><label class="form-label">📥 استيراد من Drive (File ID)</label><div style="display:flex;gap:6px"><input class="form-input" id="driveFileId" placeholder="File ID..." style="direction:ltr"><button class="btn btn-amber" onclick="importFromDrive()">📥</button></div></div>' +
+            '<div class="form-group"><label class="form-label">📥 استيراد من شيت آخر (Sheet ID)</label><div style="display:flex;gap:6px"><input class="form-input" id="sheetImportId" placeholder="Sheet ID..." style="direction:ltr"><button class="btn btn-purple" onclick="importFromSheet()">📥</button></div></div></div>' +
+            '</div>' +
+            '<div class="danger-zone">' +
+            '<h4>⚠️ منطقة الخطر</h4>' +
+            '<p style="font-size:11px;color:#64748b;margin-bottom:8px">مسح جميع البيانات من الخادم. هذا الإجراء لا يمكن التراجع عنه.</p>' +
+            '<button class="btn btn-red" onclick="confirmClearAll()" style="width:100%;justify-content:center;padding:10px">🗑️ مسح جميع البيانات</button>' +
+            '</div>' +
+            '</div></div>';
+    }
+
+    // ===== رفع ملف JSON (مصحح — يدعم العربية) =====
+    function uploadFile(){
+    var fileInput = document.getElementById('fileInput');
+    if(!fileInput || !fileInput.files || !fileInput.files.length){
+        tst('اختر ملف JSON','er');
+        return;
+    }
+    var file = fileInput.files[0];
+    if(!file.name.endsWith('.json')){
+        tst('يجب أن يكون ملف JSON','er');
+        return;
+    }
+    if(!confirm('سيتم استبدال جميع البيانات الحالية. متأكد؟')) return;
+
+    tst('جاري قراءة الملف...','inf');
+
+    var reader = new FileReader();
+    reader.onload = function(e){
+        try {
+            var content = e.target.result;
+            // التحقق من أن الملف صالح
+            var testData = JSON.parse(content);
+            var keys = Object.keys(testData);
+            tst('تم قراءة الملف: '+keys.length+' مفتاح','inf');
+
+            // تحويل آمن للعربية
+            var base64 = btoa(unescape(encodeURIComponent(content)));
+
+            tst('جاري الاستيراد...','inf');
+            google.script.run
+                .withSuccessHandler(function(res){
+                    if(typeof res==='string'){ try{ res=JSON.parse(res); } catch(e){} }
+                    if(res && res.ok){
+                        tst('✅ '+res.msg,'ok');
+                        loadData();
+                    } else {
+                        tst('❌ '+(res && res.err ? res.err : 'فشل'),'er');
+                    }
+                })
+                .withFailureHandler(function(err){
+                    tst('❌ خطأ: '+err.message,'er');
+                })
+                .importFromUploadedFile(base64, file.name);
+        } catch(err){
+            tst('❌ الملف غير صالح: '+err.message,'er');
+        }
+    };
+    reader.onerror = function(){
+        tst('فشل قراءة الملف','er');
+    };
+    reader.readAsText(file, 'UTF-8');
+}
+
+    function importFromDrive(){
+        var fileId = $('driveFileId') ? $('driveFileId').value.trim() : '';
+        if(!fileId){ alert('أدخل File ID'); return; }
+        if(!confirm('استبدال جميع البيانات الحالية؟')) return;
+        tst('جاري الاستيراد من Drive...','inf');
+        srv('importFromDriveFile', fileId).then(function(r){
+            if(r && r.ok){ tst('✅ '+r.msg,'ok'); loadData(); }
+            else { tst('❌ '+(r && r.err ? r.err : 'فشل'),'er'); }
+        }).catch(function(){ tst('خطأ في الاتصال','er'); });
+    }
+
+    function importFromSheet(){
+        var sheetId = $('sheetImportId') ? $('sheetImportId').value.trim() : '';
+        if(!sheetId){ alert('أدخل Sheet ID'); return; }
+        if(!confirm('استبدال جميع البيانات من الشيت الآخر؟')) return;
+        tst('جاري الاستيراد...','inf');
+        srv('importFromSheet', sheetId).then(function(r){
+            if(r && r.ok){ tst('✅ '+r.msg,'ok'); loadData(); }
+            else { tst('❌ '+(r && r.err ? r.err : 'فشل'),'er'); }
+        }).catch(function(){ tst('خطأ في الاتصال','er'); });
+    }
+
+    function exportData(){
+        tst('جاري التصدير إلى Drive...','inf');
+        srv('exportToDriveFile').then(function(r){
+            if(r && r.ok){ tst('✅ تم التصدير: '+r.msg,'ok'); }
+            else { tst('❌ فشل التصدير','er'); }
+        }).catch(function(){ tst('خطأ','er'); });
+    }
+
+    // ===== تصدير Excel شامل =====
+    function exportAllExcel(){
+        if(typeof XLSX === 'undefined'){ tst('مكتبة XLSX غير محملة','er'); return; }
+        var wb = XLSX.utils.book_new();
+        // ورقة المناديب
+        var repsData = [['#','الاسم','الهاتف','القسم','PIN','الحالة']];
+        D.reps.forEach(function(r){ repsData.push([r.id, r.name, r.phone||'', r.dept||'', r.pin||'', r.active?'نشط':'معطل']); });
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(repsData), 'المناديب');
+        // ورقة العهد
+        var advsData = [['#','المندوب','المبلغ','التاريخ','الغرض','الحالة','تسوية']];
+        D.advances.forEach(function(a){ advsData.push([a.id, getRepName(a.repId), Number(a.amount)||0, a.date||'', a.purpose||'', a.status||'', a.settleDate||'']); });
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(advsData), 'العهد');
+        // ورقة الفواتير
+        var invsData = [['#','المندوب','رقم الفاتورة','المورد','الإجمالي','خاضع','الضريبة','النوع','البيان','مركز التكلفة','التوجيه','التاريخ','ملاحظات']];
+        D.purchases.forEach(function(p){ invsData.push([p.id, getAdvRepName(p.advId), p.invoiceNo||'', getSupDisplay(p), Number(p.amount)||0, Number(p.taxableAmount)||0, Number(p.taxAmount)||0, p.invoiceType||'', p.desc||'', p.costCenter||'', p.direction||'', p.date||'', p.notes||'']); });
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(invsData), 'الفواتير');
+        // ورقة المصروفات
+        var expsData = [['#','المندوب','المبلغ','البيان','التاريخ','مركز التكلفة','الحالة']];
+        D.expenses.forEach(function(x){ expsData.push([x.id, getRepName(x.repId), Number(x.amount)||0, x.desc||'', x.date||'', x.costCenter||'', x.status||'']); });
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(expsData), 'المصروفات');
+        XLSX.writeFile(wb, 'بيانات_بستان_العجوة_' + new Date().toISOString().split('T')[0] + '.xlsx');
+        tst('تم تصدير Excel الشامل','ok');
+    }
+
+    // ===== مسح جميع البيانات =====
+    function confirmClearAll(){
+        var msg = '⚠️ تحذير!\n\nهل أنت متأكد من مسح جميع البيانات؟\n\nسيتم مسح:\n';
+        msg += '• '+D.reps.length+' مندوب\n';
+        msg += '• '+D.advances.length+' عهدة\n';
+        msg += '• '+D.purchases.length+' فاتورة\n';
+        msg += '• '+D.expenses.length+' مصروف\n';
+        msg += '• '+D.suppliers.length+' مورد\n';
+        msg += '• '+D.companies.length+' شركة\n\n';
+        msg += 'هذا الإجراء لا يمكن التراجع عنه!';
+        if(!confirm(msg)) return;
+        if(!confirm('تأكيد نهائي: مسح كل شيء؟')) return;
+        // مسح محلي
+        D = {reps:[], advances:[], purchases:[], expenses:[], users:D.users, advRequests:[], suppliers:[], companies:[]};
+        saveLocal();
+        // مسح على الخادم
+        srv('srvSaveAll', {reps:[], advances:[], purchases:[], expenses:[], suppliers:[], companies:[]}).then(function(r){
+            if(r && r.success){ updateStats(); renderAll(); tst('تم مسح جميع البيانات','ok'); }
+            else { tst('تم المسح محلياً','inf'); updateStats(); renderAll(); }
+        }).catch(function(){ tst('تم المسح محلياً','inf'); updateStats(); renderAll(); });
+    }
+
+    // ===== بدء التشغيل =====
+    loadData();
+    </script>
+</body>
+</html>

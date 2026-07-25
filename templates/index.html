@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>بستان العجوة — نظام المشتريات</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:'Tajawal',sans-serif;background:#080c18;color:#eef2ff;min-height:100vh;display:flex;align-items:center;justify-content:center}
+        body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at 50% 30%,rgba(245,158,11,.08),transparent 60%);pointer-events:none}
+        .wrap{max-width:500px;width:100%;padding:20px;position:relative;z-index:1}
+        .logo{background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:20px;padding:30px;text-align:center;margin-bottom:24px;animation:fadeDown .5s ease}
+        .logo h1{font-size:28px;font-weight:900;color:#000;margin-bottom:6px}
+        .logo p{font-size:13px;color:rgba(0,0,0,.5)}
+        .logo .ver{font-size:10px;color:rgba(0,0,0,.3);margin-top:4px}
+        .menu{display:flex;flex-direction:column;gap:12px}
+        .menu a{display:flex;align-items:center;gap:14px;background:#151d35;border:1px solid #1a2545;border-radius:14px;padding:18px 20px;text-decoration:none;color:#eef2ff;transition:.25s;position:relative;overflow:hidden;cursor:pointer;opacity:0;animation:fadeUp .4s ease forwards}
+        .menu a:nth-child(1){animation-delay:.1s}
+        .menu a:nth-child(2){animation-delay:.2s}
+        .menu a:nth-child(3){animation-delay:.3s}
+        .menu a:nth-child(4){animation-delay:.4s}
+        .menu a::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(245,158,11,.05),transparent);opacity:0;transition:.25s}
+        .menu a:hover{border-color:#f59e0b;transform:translateY(-2px);box-shadow:0 8px 25px rgba(245,158,11,.15)}
+        .menu a:hover::before{opacity:1}
+        .menu a:active{transform:translateY(0);box-shadow:0 4px 12px rgba(245,158,11,.1)}
+        .menu .icon{font-size:28px;width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:#0c1225;border-radius:12px;flex-shrink:0;transition:background .25s}
+        .menu a:hover .icon{background:rgba(245,158,11,.1)}
+        .menu .info h3{font-size:15px;font-weight:700;color:#f59e0b;margin-bottom:2px}
+        .menu .info span{font-size:12px;color:#5a6a85}
+        .foot{text-align:center;margin-top:24px;font-size:12px;color:#f59e0b;opacity:0;animation:fadeUp .4s ease .6s forwards}
+        .noscript-msg{text-align:center;padding:40px 20px;color:#ef4444;background:#151d35;border:1px solid #1a2545;border-radius:14px;font-size:14px;line-height:2}
+        @keyframes fadeDown{from{opacity:0;transform:translateY(-15px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(15px)}to{opacity:1;transform:translateY(0)}}
+        @media(max-width:400px){.logo{padding:20px}.logo h1{font-size:22px}.menu a{padding:14px 16px}.menu .icon{width:40px;height:40px;font-size:24px}}
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <div class="logo">
+            <h1>🌳 بستان العجوة</h1>
+            <p>Bustan Al Ajwa — نظام إدارة المشتريات</p>
+            <div class="ver">v7.1</div>
+        </div>
+        <noscript><div class="noscript-msg">⚠️ يرجى تفعيل JavaScript في المتصفح لعرض النظام</div></noscript>
+        <div class="menu" id="menuLinks"></div>
+        <div class="foot">© 2026 أبو عبدالرحمن — بستان العجوة</div>
+    </div>
+    <script src="/static/gas-compat.js"></script>
+    <script>
+        var BASE = window.location.href.split('?')[0];
+        var links = [
+            {icon:'🖥️', title:'لوحة التحكم', desc:'إدارة المناديب والعهد والفواتير والمصروفات والضريبة', page:'admin'},
+            {icon:'👤', title:'صفحة المندوب', desc:'عرض العهد وإضافة الفواتير وطلب عهد جديدة', page:'rep'},
+            {icon:'📊', title:'التقارير المالية', desc:'تقارير المشتريات والضريبة ومراكز التكلفة', page:'report'},
+            {icon:'💰', title:'تقرير العهد', desc:'تقرير مفصل عن العهد المالية بالبطاقات والجداول', page:'report2'}
+        ];
+        var menu = document.getElementById('menuLinks');
+        links.forEach(function(l){
+            var a = document.createElement('a');
+            a.href = BASE + '?page=' + l.page;
+            a.target = '_top';
+            a.innerHTML = '<div class="icon">'+l.icon+'</div><div class="info"><h3>'+l.title+'</h3><span>'+l.desc+'</span></div>';
+            menu.appendChild(a);
+        });
+    </script>
+</body>
+</html>
