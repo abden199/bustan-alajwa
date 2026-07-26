@@ -1087,35 +1087,252 @@ function loadData(){
     function cancelManual(){ MANUAL_ENTRY_ACTIVE = false; renderInvs(); }
 
     // ============================================================
-    // ===== المصروفات (مكتملة) =====
+    // ===== المصروفات (مكتملة مع فلاتر وطباعة) =====
     // ============================================================
-// ============================================================
-    // ===== المصروفات (مكتملة) =====
-    // ============================================================
+
+    var EXP_FILTER_REP = '';
+    var EXP_FILTER_ADV = '';
+
     function renderExps(){
         var el = document.getElementById('p-exps'); if(!el) return;
-        var h = '<div class="card"><div class="card-header"><h3>📄 المصروفات بدون فواتير ('+D.expenses.length+')</h3><button class="btn btn-green btn-sm" onclick="addExp()">➕ إضافة</button></div>';
-        h += '<div class="card-body"><table class="dt"><thead><tr><th>#</th><th>المندوب</th><th>المبلغ</th><th>البيان</th><th>التاريخ</th><th>مركز التكلفة</th><th>ملاحظة المدير</th><th>الحالة</th><th>⚗️</th></tr></thead><tbody>';
-        var sorted = sortByDesc(D.expenses);
+
+        // بناء خيارات المناديب
+        var repOpts = '<option value="">- الكل -</option>';
+        D.reps.forEach(function(r){
+            if(r.active===true || r.active==='true')
+                repOpts += '<option value="'+r.id+'"'+(String(r.id)===EXP_FILTER_REP?' selected':'')+'>'+r.name+'</option>';
+        });
+
+        // بناء خيارات العهد (مرتبطة بالمندوب المختار)
+        var advOpts = '<option value="">- الكل -</option>';
+        var advList = D.advances;
+        if(EXP_FILTER_REP){
+            advList = D.advances.filter(function(a){ return String(a.repId)===EXP_FILTER_REP; });
+        }
+        advList.forEach(function(a){
+            var label = a.name || ('عهدة #'+a.id+' — '+getRepName(a.repId));
+            advOpts += '<option value="'+a.id+'"'+(String(a.id)===EXP_FILTER_ADV?' selected':'')+'>'+label+'</option>';
+        });
+
+        // تصفية المصروفات
+        var filtered = D.expenses;
+        if(EXP_FILTER_REP) filtered = filtered.filter(function(e){ return String(e.repId)===EXP_FILTER_REP; });
+        if(EXP_FILTER_ADV) filtered = filtered.filter(function(e){ return String(e.advId)===EXP_FILTER_ADV; });
+
+        // حساب الإجمالي
+        var total = 0;
+        filtered.forEach(function(e){ total += parseFloat(e.amount)||0; });
+
+        var h = '';
+
+        // ===== بطاقة الفلاتر والأزرار =====
+        h += '<div class="card">';
+        h += '<div class="card-header">';
+        h += '<h3>📄 مصروفات بدون فواتير ('+filtered.length+')</h3>';
+        h += '<div style="display:flex;gap:6px;align-items:center">';
+        h += '<button class="btn btn-green btn-sm" onclick="addExp()">➕ إضافة</button>';
+        h += '<button class="btn btn-teal btn-sm" onclick="addExpRows(5)">➕ إضافة (5 سطور)</button>';
+        h += '<button class="btn btn-blue btn-sm" onclick="printExpVoucher()">🖨️ طباعة سند صرف</button>';
+        h += '</div></div>';
+
+        // ===== صف الفلاتر (سطر واحد) =====
+        h += '<div style="padding:10px 14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;border-bottom:1px solid #e2e8f0;background:#fafbfc">';
+        h += '<div style="display:flex;align-items:center;gap:4px">';
+        h += '<label class="form-label" style="margin:0;white-space:nowrap;font-size:11px">فترة حسب المندوب</label>';
+        h += '<select class="form-input" id="expFRep" onchange="onExpRepChange()" style="margin:0;max-width:170px;padding:6px 8px">'+repOpts+'</select>';
+        h += '</div>';
+        h += '<div style="display:flex;align-items:center;gap:4px">';
+        h += '<label class="form-label" style="margin:0;white-space:nowrap;font-size:11px">فترة حسب العهدة</label>';
+        h += '<select class="form-input" id="expFAdv" onchange="onExpAdvChange()" style="margin:0;max-width:170px;padding:6px 8px">'+advOpts+'</select>';
+        h += '</div>';
+        h += '<div style="margin-right:auto;display:flex;align-items:center;gap:6px">';
+        h += '<span style="font-size:11px;color:#64748b;font-weight:600">إجمالي المحدد:</span>';
+        h += '<span style="font-size:18px;font-weight:900;color:#875A7B">'+f(total)+'</span>';
+        h += '</div>';
+        h += '</div>';
+
+        // ===== الجدول =====
+        h += '<div class="card-body"><table class="dt"><thead><tr>';
+        h += '<th>#</th><th>المندوب</th><th>العهدة</th><th>المبلغ</th><th>البيان</th><th>التاريخ</th><th>مركز التكلفة</th><th>ملاحظة المدير</th><th>الحالة</th><th>⚗️</th>';
+        h += '</tr></thead><tbody>';
+
+        var sorted = sortByDesc(filtered);
         sorted.forEach(function(x){
             var rn = getRepName(x.repId);
-            var st = x.status==='approved' ? '<span class="badge badge-green">موافق</span>' : x.status==='rejected' ? '<span class="badge badge-red">مرفوض</span>' : '<span class="badge badge-amber">بانتظار</span>';
-            h += '<tr><td>'+x.id+'</td><td>'+rn+'</td><td>'+f(x.amount)+'</td><td>'+(x.desc||'-')+'</td><td>'+fd(x.date)+'</td><td>'+(x.costCenter||'-')+'</td><td style="font-size:10px;color:#64748b">'+(x.managerNotes||'-')+'</td><td>'+st+'</td>';
+            var an = '-';
+            if(x.advId){
+                var adv = null;
+                D.advances.forEach(function(a){ if(Number(a.id)===Number(x.advId)) adv=a; });
+                if(adv) an = adv.name || ('#'+adv.id);
+            }
+            var st = x.status==='approved' ? '<span class="badge badge-green">موافق</span>'
+                   : x.status==='rejected' ? '<span class="badge badge-red">مرفوض</span>'
+                   : '<span class="badge badge-amber">بانتظار</span>';
+            h += '<tr>';
+            h += '<td>'+x.id+'</td>';
+            h += '<td>'+rn+'</td>';
+            h += '<td>'+an+'</td>';
+            h += '<td style="font-weight:700;color:#875A7B">'+f(x.amount)+'</td>';
+            h += '<td>'+(x.desc||'-')+'</td>';
+            h += '<td>'+fd(x.date)+'</td>';
+            h += '<td>'+(x.costCenter||'-')+'</td>';
+            h += '<td style="font-size:10px;color:#64748b">'+(x.managerNotes||'-')+'</td>';
+            h += '<td>'+st+'</td>';
             h += '<td><button class="btn btn-blue btn-sm" onclick="editExp('+x.id+')">✏️</button>';
             if(isAdmin() && x.status!=='approved') h += ' <button class="btn btn-green btn-sm" onclick="approveExp('+x.id+')">✅</button>';
             if(isAdmin() && x.status!=='rejected') h += ' <button class="btn btn-orange btn-sm" onclick="rejectExp('+x.id+')">❌</button>';
-            h += ' <button class="btn btn-red btn-sm" onclick="delExp('+x.id+')">🗑️</button></td></tr>';
+            h += ' <button class="btn btn-red btn-sm" onclick="delExp('+x.id+')">🗑️</button></td>';
+            h += '</tr>';
         });
-        if(!D.expenses.length) h += '<tr><td colspan="9" class="empty-state">لا توجد مصروفات</td></tr>';
-        h += '</tbody></table></div></div>';
+
+        if(!filtered.length) h += '<tr><td colspan="10" class="empty-state">لا توجد مصروفات</td></tr>';
+        h += '</tbody>';
+        h += '<tfoot><tr>';
+        h += '<td colspan="3" style="text-align:left;font-weight:700">الإجمالي</td>';
+        h += '<td style="font-weight:900;color:#875A7B">'+f(total)+'</td>';
+        h += '<td colspan="6"></td>';
+        h += '</tr></tfoot>';
+        h += '</table></div></div>';
+
         el.innerHTML = h;
     }
 
+    // ===== عند تغيير فلتر المندوب — تحديث العهد =====
+    function onExpRepChange(){
+        EXP_FILTER_REP = document.getElementById('expFRep').value;
+        EXP_FILTER_ADV = ''; // إعادة تعيين فلتر العهدة
+
+        // تحديث قائمة العهد مباشرة
+        var advSelect = document.getElementById('expFAdv');
+        var advOpts = '<option value="">- الكل -</option>';
+        var advList = D.advances;
+        if(EXP_FILTER_REP){
+            advList = D.advances.filter(function(a){ return String(a.repId)===EXP_FILTER_REP; });
+        }
+        advList.forEach(function(a){
+            var label = a.name || ('عهدة #'+a.id+' — '+getRepName(a.repId));
+            advOpts += '<option value="'+a.id+'">'+label+'</option>';
+        });
+        advSelect.innerHTML = advOpts;
+
+        renderExps();
+    }
+
+    // ===== عند تغيير فلتر العهدة =====
+    function onExpAdvChange(){
+        EXP_FILTER_ADV = document.getElementById('expFAdv').value;
+        renderExps();
+    }
+
+    // ===== إضافة 5 سطور فارغة =====
+    function addExpRows(count){
+        count = count || 5;
+        for(var i = 0; i < count; i++){
+            var exp = {
+                id: nextId(D.expenses) + i,
+                repId: 0,
+                advId: 0,
+                amount: 0,
+                desc: '',
+                date: new Date().toISOString().split('T')[0],
+                costCenter: '',
+                accountantNotes: '',
+                managerNotes: '',
+                status: 'pending',
+                actionDate: ''
+            };
+            D.expenses.push(exp);
+        }
+        saveLocal();
+        renderExps();
+        updateStats();
+        tst('تم إضافة '+count+' سطور','ok');
+    }
+
+    // ===== طباعة سند صرف =====
+    function printExpVoucher(){
+        var filtered = D.expenses;
+        if(EXP_FILTER_REP) filtered = filtered.filter(function(e){ return String(e.repId)===EXP_FILTER_REP; });
+        if(EXP_FILTER_ADV) filtered = filtered.filter(function(e){ return String(e.advId)===EXP_FILTER_ADV; });
+
+        if(!filtered.length){ tst('لا توجد مصروفات للطباعة','er'); return; }
+
+        var total = 0;
+        var rows = '';
+        filtered.forEach(function(e,i){
+            var amt = parseFloat(e.amount)||0;
+            total += amt;
+            var rn = getRepName(e.repId);
+            var an = '-';
+            if(e.advId){
+                var adv = null;
+                D.advances.forEach(function(a){ if(Number(a.id)===Number(e.advId)) adv=a; });
+                if(adv) an = adv.name || ('#'+adv.id);
+            }
+            rows += '<tr>';
+            rows += '<td>'+(i+1)+'</td>';
+            rows += '<td>'+fd(e.date)+'</td>';
+            rows += '<td>'+rn+'</td>';
+            rows += '<td>'+an+'</td>';
+            rows += '<td>'+(e.costCenter||'-')+'</td>';
+            rows += '<td>'+(e.desc||'-')+'</td>';
+            rows += '<td>'+f(amt)+'</td>';
+            rows += '</tr>';
+        });
+
+        var w = window.open('','_blank');
+        w.document.write('<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8">');
+        w.document.write('<title>سند صرف — بستان العجوة</title>');
+        w.document.write('<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;900&display=swap" rel="stylesheet">');
+        w.document.write('<style>');
+        w.document.write('body{font-family:Tajawal,sans-serif;padding:30px;color:#333;margin:0}');
+        w.document.write('h2{text-align:center;color:#875A7B;margin-bottom:2px;font-size:20px}');
+        w.document.write('.sub{text-align:center;color:#777;font-size:11px;margin-bottom:16px}');
+        w.document.write('.info{display:flex;justify-content:space-between;font-size:12px;margin-bottom:14px;padding:0 4px}');
+        w.document.write('table{width:100%;border-collapse:collapse}');
+        w.document.write('th,td{border:1px solid #ddd;padding:7px 8px;text-align:right;font-size:11px}');
+        w.document.write('th{background:#f5eef7;color:#5e3568;font-weight:700}');
+        w.document.write('tr:hover{background:#faf8fb}');
+        w.document.write('.total-row td{background:#f5eef7;font-weight:900;color:#875A7B;border-top:2px solid #875A7B}');
+        w.document.write('.footer{margin-top:50px;display:flex;justify-content:space-between;font-size:12px}');
+        w.document.write('.footer div{text-align:center}');
+        w.document.write('.footer .line{border-top:1px solid #999;padding-top:4px;margin-top:30px;min-width:160px}');
+        w.document.write('.logo{font-size:28px;margin-bottom:4px}');
+        w.document.write('@media print{body{padding:15px}.no-print{display:none}}');
+        w.document.write('</style></head><body>');
+        w.document.write('<div style="text-align:center"><span class="logo">🌿</span></div>');
+        w.document.write('<h2>سند صرف</h2>');
+        w.document.write('<p class="sub">بستان العجوة — Bustan Alajwa</p>');
+        w.document.write('<div class="info">');
+        w.document.write('<span>التاريخ: '+new Date().toLocaleDateString('ar-SA')+'</span>');
+        w.document.write('<span>عدد البنود: '+filtered.length+'</span>');
+        w.document.write('</div>');
+        w.document.write('<table><thead><tr>');
+        w.document.write('<th>#</th><th>التاريخ</th><th>المندوب</th><th>العهدة</th><th>المركز</th><th>البيان</th><th>المبلغ</th>');
+        w.document.write('</tr></thead><tbody>'+rows+'</tbody>');
+        w.document.write('<tfoot><tr class="total-row">');
+        w.document.write('<td colspan="6" style="text-align:left">الإجمالي</td>');
+        w.document.write('<td>'+f(total)+'</td>');
+        w.document.write('</tr></tfoot></table>');
+        w.document.write('<div class="footer">');
+        w.document.write('<div><div class="line">توقيع المصروف</div></div>');
+        w.document.write('<div><div class="line">توقيع المحاسب</div></div>');
+        w.document.write('<div><div class="line">توقيع المدير</div></div>');
+        w.document.write('</div>');
+        w.document.write('<div class="no-print" style="text-align:center;margin-top:20px">');
+        w.document.write('<button onclick="window.print()" style="padding:10px 30px;background:#875A7B;color:#fff;border:none;border-radius:6px;font-size:14px;cursor:pointer;font-family:Tajawal">🖨️ طباعة</button>');
+        w.document.write('</div>');
+        w.document.write('<script>setTimeout(function(){window.print()},600)<\/script>');
+        w.document.write('</body></html>');
+        w.document.close();
+    }
+
+    // ===== الدوال القديمة بدون تغيير =====
     function addExp(){
         var el = document.getElementById('p-exps'); if(!el) return;
         var ro = '<option value="">-- اختر --</option>';
         D.reps.forEach(function(r){ if(r.active===true || r.active==='true') ro+='<option value="'+r.id+'">'+r.name+'</option>'; });
-        var h = '<div class="card"><div class="card-header"><h3>➕ مصروف جديد</h3><button class="btn btn-gray btn-sm" onclick="renderExps()">✕</button></div><div class="card-body-pad">';
+        var h = '<div class="card"><div class="card-header"><h3>➕ مصروف جديد</h3><button class="btn btn-gray btn-sm" onclick="renderExps()">✕ إلغاء</button></div><div class="card-body-pad">';
         h += '<div class="form-grid"><div class="form-group"><label class="form-label">المندوب</label><select class="form-input" id="nERep">'+ro+'</select></div>';
         h += '<div class="form-group"><label class="form-label">العهدة (اختياري)</label><select class="form-input" id="nEAdv"><option value="">-- بدون --</option></select></div></div>';
         h += '<div class="form-grid"><div class="form-group"><label class="form-label">المبلغ</label><input class="form-input" id="nEAmt" type="number" step="0.01"></div>';
@@ -1126,11 +1343,10 @@ function loadData(){
         h += '<div class="form-group"><label class="form-label">ملاحظات المندوب</label><input class="form-input" id="nENotes"></div>';
         h += '<button class="btn btn-primary" onclick="saveNewExp()" style="width:100%;justify-content:center;padding:10px">💾 حفظ</button></div></div>';
         el.innerHTML = h;
-        // تحديث العهد عند تغيير المندوب
         $('nERep').onchange = function(){
             var rid = Number(this.value);
             var advOpts = '<option value="">-- بدون --</option>';
-            D.advances.forEach(function(a){ if(Number(a.repId)===rid && a.status!=='settled') advOpts+='<option value="'+a.id+'">#'+a.id+'</option>'; });
+            D.advances.forEach(function(a){ if(Number(a.repId)===rid && a.status!=='settled') advOpts+='<option value="'+a.id+'">#'+a.id+' — '+(a.name||'عهدة')+'</option>'; });
             $('nEAdv').innerHTML = advOpts;
         };
     }
@@ -1167,144 +1383,35 @@ function loadData(){
         var el = document.getElementById('p-exps'); if(!el) return;
         var ro = '<option value="">-- اختر --</option>';
         D.reps.forEach(function(r){ ro+='<option value="'+r.id+'"'+(Number(r.id)===Number(x.repId)?' selected':'')+'>'+r.name+'</option>'; });
-        var h = '<div class="card"><div class="card-header"><h3>✏️ تعديل مصروف #'+id+'</h3><button class="btn btn-gray btn-sm" onclick="renderExps()">✕</button></div><div class="card-body-pad">';
+        var h = '<div class="card"><div class="card-header"><h3>✏️ تعديل مصروف #'+id+'</h3><button class="btn btn-gray btn-sm" onclick="renderExps()">✕ إلغاء</button></div><div class="card-body-pad">';
         h += '<div class="form-grid"><div class="form-group"><label class="form-label">المندوب</label><select class="form-input" id="eERep">'+ro+'</select></div>';
-        h += '<div class="form-group"><label class="form-label">المبلغ</label><input class="form-input" id="eEAmt" type="number" step="0.01" value="'+x.amount+'"></div></div>';
-        h += '<div class="form-grid"><div class="form-group"><label class="form-label">التاريخ</label><input class="form-input" id="eEDate" type="date" value="'+(x.date||'')+'"></div>';
+        h += '<div class="form-group"><label class="form-label">العهدة</label><select class="form-input" id="eEAdv"><option value="">-- بدون --</option></select></div></div>';
+        h += '<div class="form-grid"><div class="form-group"><label class="form-label">المبلغ</label><input class="form-input" id="eEAmt" type="number" step="0.01" value="'+x.amount+'"></div>';
+        h += '<div class="form-group"><label class="form-label">التاريخ</label><input class="form-input" id="eEDate" type="date" value="'+(x.date||'')+'"></div></div>';
+        h += '<div class="form-grid"><div class="form-group"><label class="form-label">البيان</label><input class="form-input" id="eEDesc" value="'+addslashes(x.desc||'')+'"></div>';
         h += '<div class="form-group"><label class="form-label">مركز التكلفة</label><select class="form-input" id="eECC">'+buildCCOpts(x.costCenter)+'</select></div></div>';
-        h += '<div class="form-group"><label class="form-label">البيان</label><input class="form-input" id="eEDesc" value="'+addslashes(x.desc||'')+'"></div>';
         h += '<div class="form-group"><label class="form-label">ملاحظة المدير</label><input class="form-input" id="eEMgr" value="'+addslashes(x.managerNotes||'')+'"></div>';
         h += '<div class="form-group"><label class="form-label">الحالة</label><select class="form-input" id="eEStatus"><option value="pending"'+(x.status==='pending'?' selected':'')+'>بانتظار</option><option value="approved"'+(x.status==='approved'?' selected':'')+'>موافق</option><option value="rejected"'+(x.status==='rejected'?' selected':'')+'>مرفوض</option></select></div>';
         h += '<button class="btn btn-primary" onclick="saveEditExp('+id+')" style="width:100%;justify-content:center;padding:10px">💾 حفظ</button></div></div>';
         el.innerHTML = h;
-    }
-
-    function saveEditExp(id){
-        var update = {
-            repId: Number($('eERep').value),
-            amount: Number($('eEAmt').value),
-            date: $('eEDate').value,
-            costCenter: $('eECC').value,
-            desc: $('eEDesc').value,
-            managerNotes: $('eEMgr').value,
-            status: $('eEStatus').value,
-            actionDate: new Date().toISOString().split('T')[0]
-        };
-        srv('srvUpdateExpense', id, update).then(function(r){
-            if(r && r.success){
-                D.expenses.forEach(function(e){ if(Number(e.id)===id) Object.keys(update).forEach(function(k){ e[k]=update[k]; }); });
-                saveLocal(); updateStats(); renderExps();
-                tst('تم التعديل','ok');
-            } else { tst('فشل','er'); }
-        }).catch(function(){ tst('خطأ','er'); });
-    }
-
-    function approveExp(id){
-        srv('srvUpdateExpense', id, {status:'approved', actionDate:new Date().toISOString().split('T')[0]}).then(function(r){
-            if(r && r.success){
-                D.expenses.forEach(function(e){ if(Number(e.id)===id){ e.status='approved'; e.actionDate=new Date().toISOString().split('T')[0]; }});
-                saveLocal(); renderExps(); tst('تمت الموافقة','ok');
-            } else { tst('فشل','er'); }
-        }).catch(function(){ tst('خطأ','er'); });
-    }
-
-    function rejectExp(id){
-        var notes = prompt('سبب الرفض (اختياري):');
-        srv('srvUpdateExpense', id, {status:'rejected', managerNotes:notes||'', actionDate:new Date().toISOString().split('T')[0]}).then(function(r){
-            if(r && r.success){
-                D.expenses.forEach(function(e){ if(Number(e.id)===id){ e.status='rejected'; e.managerNotes=notes||''; e.actionDate=new Date().toISOString().split('T')[0]; }});
-                saveLocal(); renderExps(); tst('تم الرفض','ok');
-            } else { tst('فشل','er'); }
-        }).catch(function(){ tst('خطأ','er'); });
-    }
-
-    function delExp(id){ if(!confirm('حذف المصروف؟')) return; D.expenses = D.expenses.filter(function(x){ return Number(x.id)!==id; }); saveAndRefresh(); tst('تم الحذف','ok'); }
-
-// ============================================================
-// ===== دالة مساعدة للتنسيق =====
-// ============================================================
-function numberFormat(n) {
-    return parseFloat(n || 0).toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-        function saveData() {
-    try {
-        localStorage.setItem('ba_data', JSON.stringify(D));
-    } catch(e) {
-        console.error('خطأ في الحفظ:', e);
-    }
-}
-
-    function addExp(){
-        var el = document.getElementById('p-exps'); if(!el) return;
-        var ro = '<option value="">-- اختر --</option>';
-        D.reps.forEach(function(r){ if(r.active===true || r.active==='true') ro+='<option value="'+r.id+'">'+r.name+'</option>'; });
-        var h = '<div class="card"><div class="card-header"><h3>➕ مصروف جديد</h3><button class="btn btn-gray btn-sm" onclick="renderExps()">✕</button></div><div class="card-body-pad">';
-        h += '<div class="form-grid"><div class="form-group"><label class="form-label">المندوب</label><select class="form-input" id="nERep">'+ro+'</select></div>';
-        h += '<div class="form-group"><label class="form-label">العهدة (اختياري)</label><select class="form-input" id="nEAdv"><option value="">-- بدون --</option></select></div></div>';
-        h += '<div class="form-grid"><div class="form-group"><label class="form-label">المبلغ</label><input class="form-input" id="nEAmt" type="number" step="0.01"></div>';
-        h += '<div class="form-group"><label class="form-label">التاريخ</label><input class="form-input" id="nEDate" type="date" value="'+new Date().toISOString().split('T')[0]+'"></div></div>';
-        h += '<div class="form-grid"><div class="form-group"><label class="form-label">البيان</label><input class="form-input" id="nEDesc"></div>';
-        h += '<div class="form-group"><label class="form-label">مركز التكلفة</label><select class="form-input" id="nECC" onchange="togCC(this,\'nEOther\')">'+buildCCOpts()+'</select></div></div>';
-        h += '<div class="form-group" id="nEOtherDiv" style="display:none"><label class="form-label">حدد</label><input class="form-input" id="nEOther"></div>';
-        h += '<div class="form-group"><label class="form-label">ملاحظات المندوب</label><input class="form-input" id="nENotes"></div>';
-        h += '<button class="btn btn-primary" onclick="saveNewExp()" style="width:100%;justify-content:center;padding:10px">💾 حفظ</button></div></div>';
-        el.innerHTML = h;
+        // تحميل العهد للمندوب المختار
+        var rid = Number(x.repId);
+        var advOpts = '<option value="">-- بدون --</option>';
+        D.advances.forEach(function(a){ if(Number(a.repId)===rid) advOpts+='<option value="'+a.id+'"'+(Number(a.id)===Number(x.advId)?' selected':'')+'>'+(a.name||('#'+a.id))+'</option>'; });
+        $('eEAdv').innerHTML = advOpts;
         // تحديث العهد عند تغيير المندوب
-        $('nERep').onchange = function(){
-            var rid = Number(this.value);
-            var advOpts = '<option value="">-- بدون --</option>';
-            D.advances.forEach(function(a){ if(Number(a.repId)===rid && a.status!=='settled') advOpts+='<option value="'+a.id+'">#'+a.id+'</option>'; });
-            $('nEAdv').innerHTML = advOpts;
+        $('eERep').onchange = function(){
+            var nrid = Number(this.value);
+            var aOpts = '<option value="">-- بدون --</option>';
+            D.advances.forEach(function(a){ if(Number(a.repId)===nrid) aOpts+='<option value="'+a.id+'">'+(a.name||('#'+a.id))+'</option>'; });
+            $('eEAdv').innerHTML = aOpts;
         };
-    }
-
-    function saveNewExp(){
-        var repId = Number($('nERep').value);
-        var amt = parseFloat($('nEAmt').value);
-        if(!repId || isNaN(amt)){ alert('أدخل البيانات'); return; }
-        var exp = {
-            repId: repId,
-            advId: Number($('nEAdv').value)||0,
-            amount: amt,
-            desc: $('nEDesc').value,
-            date: $('nEDate').value,
-            costCenter: getCCVal('nECC','nEOther'),
-            accountantNotes: $('nENotes').value,
-            managerNotes: '',
-            status: 'pending',
-            actionDate: ''
-        };
-        srv('srvAddExpenses', [exp]).then(function(r){
-            if(r && r.success){
-                exp.id = nextId(D.expenses);
-                D.expenses.push(exp);
-                saveLocal(); updateStats(); renderExps();
-                tst('تمت الإضافة','ok');
-            } else { tst('فشل','er'); }
-        }).catch(function(){ tst('خطأ','er'); });
-    }
-
-    function editExp(id){
-        var x = null; D.expenses.forEach(function(e){ if(Number(e.id)===id) x=e; });
-        if(!x) return;
-        var el = document.getElementById('p-exps'); if(!el) return;
-        var ro = '<option value="">-- اختر --</option>';
-        D.reps.forEach(function(r){ ro+='<option value="'+r.id+'"'+(Number(r.id)===Number(x.repId)?' selected':'')+'>'+r.name+'</option>'; });
-        var h = '<div class="card"><div class="card-header"><h3>✏️ تعديل مصروف #'+id+'</h3><button class="btn btn-gray btn-sm" onclick="renderExps()">✕</button></div><div class="card-body-pad">';
-        h += '<div class="form-grid"><div class="form-group"><label class="form-label">المندوب</label><select class="form-input" id="eERep">'+ro+'</select></div>';
-        h += '<div class="form-group"><label class="form-label">المبلغ</label><input class="form-input" id="eEAmt" type="number" step="0.01" value="'+x.amount+'"></div></div>';
-        h += '<div class="form-grid"><div class="form-group"><label class="form-label">التاريخ</label><input class="form-input" id="eEDate" type="date" value="'+(x.date||'')+'"></div>';
-        h += '<div class="form-group"><label class="form-label">مركز التكلفة</label><select class="form-input" id="eECC">'+buildCCOpts(x.costCenter)+'</select></div></div>';
-        h += '<div class="form-group"><label class="form-label">البيان</label><input class="form-input" id="eEDesc" value="'+addslashes(x.desc||'')+'"></div>';
-        h += '<div class="form-group"><label class="form-label">ملاحظة المدير</label><input class="form-input" id="eEMgr" value="'+addslashes(x.managerNotes||'')+'"></div>';
-        h += '<div class="form-group"><label class="form-label">الحالة</label><select class="form-input" id="eEStatus"><option value="pending"'+(x.status==='pending'?' selected':'')+'>بانتظار</option><option value="approved"'+(x.status==='approved'?' selected':'')+'>موافق</option><option value="rejected"'+(x.status==='rejected'?' selected':'')+'>مرفوض</option></select></div>';
-        h += '<button class="btn btn-primary" onclick="saveEditExp('+id+')" style="width:100%;justify-content:center;padding:10px">💾 حفظ</button></div></div>';
-        el.innerHTML = h;
     }
 
     function saveEditExp(id){
         var update = {
             repId: Number($('eERep').value),
+            advId: Number($('eEAdv').value)||0,
             amount: Number($('eEAmt').value),
             date: $('eEDate').value,
             costCenter: $('eECC').value,
@@ -1341,8 +1448,11 @@ function numberFormat(n) {
         }).catch(function(){ tst('خطأ','er'); });
     }
 
-    function delExp(id){ if(!confirm('حذف المصروف؟')) return; D.expenses = D.expenses.filter(function(x){ return Number(x.id)!==id; }); saveAndRefresh(); tst('تم الحذف','ok'); }
-
+    function delExp(id){
+        if(!confirm('حذف المصروف؟')) return;
+        D.expenses = D.expenses.filter(function(x){ return Number(x.id)!==id; });
+        saveAndRefresh(); tst('تم الحذف','ok');
+    }
     // ============================================================
     // ===== قسم الضريبة (مكتمل) =====
     // ============================================================
