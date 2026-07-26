@@ -1089,24 +1089,253 @@ function loadData(){
     // ============================================================
     // ===== المصروفات (مكتملة) =====
     // ============================================================
-    function renderExps(){
-        var el = document.getElementById('p-exps'); if(!el) return;
-        var h = '<div class="card"><div class="card-header"><h3>📄 المصروفات بدون فواتير ('+D.expenses.length+')</h3><button class="btn btn-green btn-sm" onclick="addExp()">➕ إضافة</button></div>';
-        h += '<div class="card-body"><table class="dt"><thead><tr><th>#</th><th>المندوب</th><th>المبلغ</th><th>البيان</th><th>التاريخ</th><th>مركز التكلفة</th><th>ملاحظة المدير</th><th>الحالة</th><th>⚗️</th></tr></thead><tbody>';
-        var sorted = sortByDesc(D.expenses);
-        sorted.forEach(function(x){
-            var rn = getRepName(x.repId);
-            var st = x.status==='approved' ? '<span class="badge badge-green">موافق</span>' : x.status==='rejected' ? '<span class="badge badge-red">مرفوض</span>' : '<span class="badge badge-amber">بانتظار</span>';
-            h += '<tr><td>'+x.id+'</td><td>'+rn+'</td><td>'+f(x.amount)+'</td><td>'+(x.desc||'-')+'</td><td>'+fd(x.date)+'</td><td>'+(x.costCenter||'-')+'</td><td style="font-size:10px;color:#64748b">'+(x.managerNotes||'-')+'</td><td>'+st+'</td>';
-            h += '<td><button class="btn btn-blue btn-sm" onclick="editExp('+x.id+')">✏️</button>';
-            if(isAdmin() && x.status!=='approved') h += ' <button class="btn btn-green btn-sm" onclick="approveExp('+x.id+')">✅</button>';
-            if(isAdmin() && x.status!=='rejected') h += ' <button class="btn btn-orange btn-sm" onclick="rejectExp('+x.id+')">❌</button>';
-            h += ' <button class="btn btn-red btn-sm" onclick="delExp('+x.id+')">🗑️</button></td></tr>';
-        });
-        if(!D.expenses.length) h += '<tr><td colspan="9" class="empty-state">لا توجد مصروفات</td></tr>';
-        h += '</tbody></table></div></div>';
-        el.innerHTML = h;
+    // ============================================================
+// ===== صفحة المصروفات =====
+// ============================================================
+
+function renderExps() {
+    var pg = document.getElementById('p-exps');
+    var advList = D.advances || [];
+    var repList = D.reps || [];
+    var expList = D.expenses || [];
+
+    // بناء خيارات العهد
+    var advOpts = '<option value="">- الكل -</option>';
+    advList.forEach(function(a) {
+        advOpts += '<option value="' + a.id + '">' + (a.name || a.repName || 'عهدة #' + a.id) + '</option>';
+    });
+
+    // بناء خيارات المناديب
+    var repOpts = '<option value="">- الكل -</option>';
+    repList.forEach(function(r) {
+        repOpts += '<option value="' + r.id + '">' + r.name + '</option>';
+    });
+
+    var html = '';
+
+    // ===== بطاقة الفلاتر والأزرار =====
+    html += '<div class="card">';
+    html += '<div class="card-header">';
+    html += '<h3>📄 مصروفات بدون فواتير</h3>';
+    html += '<div style="display:flex;gap:6px;align-items:center">';
+    html += '<button class="btn btn-green btn-sm" onclick="addExpRows(5)">➕ إضافة (5 سطور)</button>';
+    html += '<button class="btn btn-blue btn-sm" onclick="printExpVoucher()">🖨️ طباعة سند صرف</button>';
+    html += '</div>';
+    html += '</div>';
+
+    // ===== صف الفلاتر =====
+    html += '<div class="card-body-pad">';
+    html += '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px">';
+
+    // فلتر العهدة
+    html += '<div style="display:flex;align-items:center;gap:4px">';
+    html += '<label class="form-label" style="margin:0;white-space:nowrap">فترة حسب العهدة</label>';
+    html += '<select class="form-input" id="expFilterAdv" onchange="filterExps()" style="margin:0;max-width:180px">' + advOpts + '</select>';
+    html += '</div>';
+
+    // فلتر المندوب
+    html += '<div style="display:flex;align-items:center;gap:4px">';
+    html += '<label class="form-label" style="margin:0;white-space:nowrap">فترة حسب المندوب</label>';
+    html += '<select class="form-input" id="expFilterRep" onchange="filterExps()" style="margin:0;max-width:180px">' + repOpts + '</select>';
+    html += '</div>';
+
+    // إجمالي المحدد
+    html += '<div style="display:flex;align-items:center;gap:4px;margin-right:auto">';
+    html += '<span style="font-size:11px;color:#64748b;font-weight:600">إجمالي المحدد:</span>';
+    html += '<span id="expTotal" style="font-size:16px;font-weight:900;color:#875A7B">0.00</span>';
+    html += '</div>';
+
+    html += '</div>';
+
+    // ===== جدول المصروفات =====
+    html += '<table class="dt" id="expTable">';
+    html += '<thead><tr>';
+    html += '<th>#</th>';
+    html += '<th>التاريخ</th>';
+    html += '<th>المندوب</th>';
+    html += '<th>العهدة</th>';
+    html += '<th>المركز</th>';
+    html += '<th>الوصف</th>';
+    html += '<th>المبلغ</th>';
+    html += '<th>إجراءات</th>';
+    html += '</tr></thead>';
+    html += '<tbody id="expTbody"></tbody>';
+    html += '<tfoot><tr>';
+    html += '<td colspan="6" style="text-align:left">الإجمالي</td>';
+    html += '<td id="expFootTotal">0.00</td>';
+    html += '<td></td>';
+    html += '</tr></tfoot>';
+    html += '</table>';
+
+    html += '</div>'; // card-body-pad
+    html += '</div>'; // card
+
+    pg.innerHTML = html;
+    filterExps();
+}
+
+function filterExps() {
+    var advId = document.getElementById('expFilterAdv').value;
+    var repId = document.getElementById('expFilterRep').value;
+    var list = D.expenses || [];
+
+    // تصفية حسب العهدة
+    if (advId) {
+        list = list.filter(function(e) { return String(e.advanceId) === advId; });
     }
+    // تصفية حسب المندوب
+    if (repId) {
+        list = list.filter(function(e) { return String(e.repId) === repId; });
+    }
+
+    renderExpTable(list);
+}
+
+function renderExpTable(list) {
+    var tbody = document.getElementById('expTbody');
+    var total = 0;
+
+    if (!list || list.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="empty-state">لا توجد مصروفات</td></tr>';
+        document.getElementById('expTotal').textContent = '0.00';
+        document.getElementById('expFootTotal').textContent = '0.00';
+        return;
+    }
+
+    var html = '';
+    list.forEach(function(e, i) {
+        var amt = parseFloat(e.amount) || 0;
+        total += amt;
+
+        var repName = '-';
+        var rep = (D.reps || []).find(function(r) { return String(r.id) === String(e.repId); });
+        if (rep) repName = rep.name;
+
+        var advName = '-';
+        var adv = (D.advances || []).find(function(a) { return String(a.id) === String(e.advanceId); });
+        if (adv) advName = adv.name || adv.repName || 'عهدة #' + adv.id;
+
+        html += '<tr>';
+        html += '<td>' + (i + 1) + '</td>';
+        html += '<td>' + (e.date || '-') + '</td>';
+        html += '<td>' + repName + '</td>';
+        html += '<td>' + advName + '</td>';
+        html += '<td>' + (e.costCenter || '-') + '</td>';
+        html += '<td>' + (e.desc || '-') + '</td>';
+        html += '<td style="font-weight:700;color:#875A7B">' + numberFormat(amt) + '</td>';
+        html += '<td>';
+        html += '<button class="btn btn-red btn-sm" onclick="deleteExp(' + e.id + ')">🗑️</button>';
+        html += '</td>';
+        html += '</tr>';
+    });
+
+    tbody.innerHTML = html;
+    document.getElementById('expTotal').textContent = numberFormat(total);
+    document.getElementById('expFootTotal').textContent = numberFormat(total);
+}
+
+function addExpRows(count) {
+    count = count || 5;
+    for (var i = 0; i < count; i++) {
+        var newExp = {
+            id: Date.now() + i,
+            date: new Date().toISOString().split('T')[0],
+            repId: '',
+            advanceId: '',
+            costCenter: '',
+            desc: '',
+            amount: 0
+        };
+        D.expenses.push(newExp);
+    }
+    saveData();
+    renderExps();
+    showToast('تم إضافة ' + count + ' سطور', 'ok');
+}
+
+function deleteExp(id) {
+    if (!confirm('هل تريد حذف هذا المصروف؟')) return;
+    D.expenses = D.expenses.filter(function(e) { return e.id !== id; });
+    saveData();
+    renderExps();
+    refreshStats();
+    showToast('تم الحذف', 'ok');
+}
+
+function printExpVoucher() {
+    var advId = document.getElementById('expFilterAdv').value;
+    var repId = document.getElementById('expFilterRep').value;
+    var list = D.expenses || [];
+
+    if (advId) list = list.filter(function(e) { return String(e.advanceId) === advId; });
+    if (repId) list = list.filter(function(e) { return String(e.repId) === repId; });
+
+    if (list.length === 0) {
+        showToast('لا توجد مصروفات للطباعة', 'er');
+        return;
+    }
+
+    var total = 0;
+    var rows = '';
+    list.forEach(function(e, i) {
+        var amt = parseFloat(e.amount) || 0;
+        total += amt;
+        var repName = '-';
+        var rep = (D.reps || []).find(function(r) { return String(r.id) === String(e.repId); });
+        if (rep) repName = rep.name;
+
+        rows += '<tr>';
+        rows += '<td>' + (i + 1) + '</td>';
+        rows += '<td>' + (e.date || '-') + '</td>';
+        rows += '<td>' + repName + '</td>';
+        rows += '<td>' + (e.costCenter || '-') + '</td>';
+        rows += '<td>' + (e.desc || '-') + '</td>';
+        rows += '<td>' + numberFormat(amt) + '</td>';
+        rows += '</tr>';
+    });
+
+    var w = window.open('', '_blank');
+    w.document.write('<!DOCTYPE html><html lang="ar" dir="rtl"><head>');
+    w.document.write('<meta charset="UTF-8"><title>سند صرف</title>');
+    w.document.write('<style>');
+    w.document.write('body{font-family:Tajawal,Tahoma,sans-serif;padding:30px;color:#333}');
+    w.document.write('h2{text-align:center;color:#875A7B;margin-bottom:4px}');
+    w.document.write('p.sub{text-align:center;color:#777;font-size:12px;margin-bottom:20px}');
+    w.document.write('table{width:100%;border-collapse:collapse;margin-top:10px}');
+    w.document.write('th,td{border:1px solid #ddd;padding:8px;text-align:right;font-size:12px}');
+    w.document.write('th{background:#f5eef7;color:#5e3568;font-weight:700}');
+    w.document.write('.total-row{background:#f5eef7;font-weight:900;color:#875A7B}');
+    w.document.write('.footer{margin-top:40px;display:flex;justify-content:space-between;font-size:12px}');
+    w.document.write('@media print{body{padding:10px}}');
+    w.document.write('</style></head><body>');
+    w.document.write('<h2>🌿 بستان العجوة — سند صرف</h2>');
+    w.document.write('<p class="sub">تاريخ الطباعة: ' + new Date().toLocaleDateString('ar-SA') + '</p>');
+    w.document.write('<table><thead><tr>');
+    w.document.write('<th>#</th><th>التاريخ</th><th>المندوب</th><th>المركز</th><th>الوصف</th><th>المبلغ</th>');
+    w.document.write('</tr></thead><tbody>' + rows + '</tbody>');
+    w.document.write('<tfoot><tr class="total-row">');
+    w.document.write('<td colspan="5" style="text-align:left">الإجمالي</td>');
+    w.document.write('<td>' + numberFormat(total) + '</td>');
+    w.document.write('</tr></tfoot></table>');
+    w.document.write('<div class="footer"><span>توقيع المصروف: _______________</span><span>توقيع المدير: _______________</span></div>');
+    w.document.write('<script>setTimeout(function(){window.print()},500)<\/script>');
+    w.document.write('</body></html>');
+    w.document.close();
+}
+
+// ============================================================
+// ===== دالة مساعدة للتنسيق =====
+// ============================================================
+function numberFormat(n) {
+    return parseFloat(n || 0).toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+        function saveData() {
+    try {
+        localStorage.setItem('ba_data', JSON.stringify(D));
+    } catch(e) {
+        console.error('خطأ في الحفظ:', e);
+    }
+}
 
     function addExp(){
         var el = document.getElementById('p-exps'); if(!el) return;
