@@ -755,16 +755,25 @@ function loadData(){
         } catch(e){}
     }
 
-    function updateStats(){
-        var ar = 0; D.reps.forEach(function(r){ if(r.active===true || r.active==='true') ar++; });
-        var expTotal = 0; D.expenses.forEach(function(x){ if(x.status==='approved') expTotal += Number(x.amount); });
-        var settled = 0, open2 = 0; D.advances.forEach(function(a){ if(a.status==='settled') settled++; else open2++; });
-        var taxInvs = 0; D.purchases.forEach(function(p){ if(p.invoiceType==='فاتورة ضريبية') taxInvs++; });
-        var totalInvAmt = 0; D.purchases.forEach(function(p){ totalInvAmt += Number(p.amount); });
-        var el; el=$('xReps'); if(el) el.textContent=ar; el=$('xAdvs'); if(el) el.textContent=D.advances.length;
-        el=$('xInvs'); if(el) el.textContent=D.purchases.length; el=$('xExp'); if(el) el.textContent=f(expTotal);
-        el=$('xSettled'); if(el) el.textContent=settled; el=$('xOpen'); if(el) el.textContent=open2;
-        el=$('xTax'); if(el) el.textContent=taxInvs; el=$('xTotalInv'); if(el) el.textContent=f(totalInvAmt);
+        function updateStats(){
+        var el;
+        el = document.getElementById('xReps');     if(el) el.textContent = D.reps.length;
+        el = document.getElementById('xAdvs');     if(el) el.textContent = D.advances.length;
+        el = document.getElementById('xInvs');     if(el) el.textContent = D.purchases.length;
+        el = document.getElementById('xExp');      if(el) el.textContent = D.expenses.length;
+
+        var settled=0, open=0, taxInv=0, totalInv=0;
+        D.advances.forEach(function(a){
+            if(a.status==='settled') settled++; else open++;
+        });
+        D.purchases.forEach(function(p){
+            if(p.taxInvoice) taxInv++;
+            totalInv += parseFloat(p.total)||parseFloat(p.amount)||0;
+        });
+        el = document.getElementById('xSettled');  if(el) el.textContent = settled;
+        el = document.getElementById('xOpen');     if(el) el.textContent = open;
+        el = document.getElementById('xTax');      if(el) el.textContent = taxInv;
+        el = document.getElementById('xTotalInv'); if(el) el.textContent = f(totalInv);
     }
 
     function renderAll(){ renderReps(); renderAdvs(); renderInvs(); renderExps(); renderTax(); renderSuppliers(); renderCompanies(); renderUsers(); renderShare(); renderBackup(); }
