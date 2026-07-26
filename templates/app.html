@@ -523,6 +523,7 @@ select.form-input optgroup{background:#f5eef7;color:#875A7B;font-weight:700}
     <script src="/static/gas-compat.js"></script>
 
     <script>
+        function showToast(msg, type){ tst(msg, type); }
 function addslashes(str){
     if(str===null||str===undefined)return '';
     return String(str).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'\\"').replace(/\0/g,'\\0');
