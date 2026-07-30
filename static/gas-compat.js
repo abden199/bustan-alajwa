@@ -38,3 +38,18 @@
     window.google={script:{run:R}};
     console.log('gas-compat ready');
 })();
+
+// Compatibility aliases to fix UI ReferenceErrors (refreshStats, tsto)
+(function(){
+  if (typeof window.refreshStats === 'undefined'){
+    window.refreshStats = function(){
+      try{ if (typeof window.updateStats === 'function') window.updateStats(); }catch(e){ console.error(e); }
+    };
+  }
+  if (typeof window.tsto === 'undefined'){
+    window.tsto = function(msg,type){
+      try{ if (typeof window.tst === 'function') return window.tst(msg,type); }catch(e){}
+      console.log('toast:', type, msg);
+    };
+  }
+})();
