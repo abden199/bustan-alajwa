@@ -1020,13 +1020,13 @@ function loadData(){
         var el = document.getElementById('p-invs'); if(!el) return;
         var ao = ''; D.advances.forEach(function(a){ if(a.status!=='settled'){ var rn=getRepName(a.repId); ao+='<option value="'+a.id+'">#'+a.id+' - '+rn+'</option>'; } });
         var h = '<div class="card"><div class="card-header"><h3>📝 إدخال يدوي (30 سطر)</h3><div><button class="btn btn-green btn-sm" onclick="saveManualBatch()">💾 حفظ الكل</button> <button class="btn btn-gray btn-sm" onclick="cancelManual()">✕</button></div></div><div class="card-body-pad">';
-        h += '<div class="form-grid"><div class="form-group"><label class="form-label">العهدة (للكل)</label><select class="form-input" id="mAdv">'+ao+'</select></div>';
-        h += '<div class="form-group"><label class="form-label">نوع الفاتورة (للكل)</label><select class="form-input" id="mType"><option>فاتورة عادية</option><option>فاتورة ضريبية</option></select></div></div>';
+        h += '<div class="form-grid"><div class="form-group"><label class="form-label">العهدة (للكل)</label><select class="form-input" id="mAdv">'+ao+'</select></div></div>';
         h += '<div style="overflow-x:auto"><table class="dt" id="manualTable"><thead><tr>';
-        h += '<th>#</th><th>رقم الفاتورة</th><th>الإجمالي</th><th>الضريبة</th><th>خاضع</th><th>البيان</th><th>مركز التكلفة</th><th>التاريخ</th></tr></thead><tbody>';
+        h += '<th>#</th><th>رقم الفاتورة</th><th>النوع</th><th>الإجمالي</th><th>الضريبة</th><th>خاضع</th><th>البيان</th><th>مركز التكلفة</th><th>التاريخ</th></tr></thead><tbody>';
         for(var i=0; i<30; i++){
             h += '<tr><td>'+(i+1)+'</td>';
             h += '<td><input class="form-input fi-tbl" id="mNo'+i+'"></td>';
+            h += '<td><select class="form-input fi-tbl" id="mType'+i+'" onchange="calcManualTax('+i+')"><option>فاتورة عادية</option><option>فاتورة ضريبية</option></select></td>';
             h += '<td><input class="form-input fi-tbl" id="mAmt'+i+'" type="number" step="0.01" oninput="calcManualTax('+i+')"></td>';
             h += '<td><input class="form-input fi-tbl" id="mTax'+i+'" readonly></td>';
             h += '<td><input class="form-input fi-tbl" id="mTxbl'+i+'" readonly></td>';
@@ -1039,7 +1039,7 @@ function loadData(){
     }
 
     function calcManualTax(i){
-        var a = Number($('mAmt'+i).value)||0, t = $('mType').value;
+        var a = Number($('mAmt'+i).value)||0, t = $('mType'+i).value;
         var r = calcTaxFor(a, t);
         $('mTax'+i).value = r.tax;
         $('mTxbl'+i).value = r.taxable;
@@ -1047,12 +1047,12 @@ function loadData(){
 
     function saveManualBatch(){
         var advId = Number($('mAdv').value);
-        var invType = $('mType').value;
         if(!advId){ alert('اختر العهدة'); return; }
         var items = [];
         for(var i=0; i<30; i++){
             var amt = Number($('mAmt'+i).value)||0;
             if(amt <= 0) continue;
+            var invType = $('mType'+i).value;
             items.push({
                 advId: advId,
                 amount: amt,
