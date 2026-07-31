@@ -1,0 +1,57 @@
+<!-- تحديث: إضافة نوع الفاتورة في كل صف من الجدول -->
+<!-- النسخة المحدثة من جدول الفواتير -->
+
+<script>
+// ===== دالة بناء صفوف الفواتير المحدثة =====
+function buildInvRows(ps){ 
+    var sorted=sortByDesc(ps); 
+    var h=''; 
+    sorted.forEach(function(p){ 
+        var rn=getAdvRepName(p.advId); 
+        var vn=getSupDisplay(p); 
+        h+='<tr>'; 
+        h+='<td style="color:#d97706;font-weight:700">'+p.id+'</td>';
+        h+='<td>'+rn+'</td>';
+        h+='<td>'+p.invoiceNo+'</td>';
+        h+='<td>'+vn+'</td>';
+        h+='<td style="font-weight:700;color:#2563eb">'+f(p.amount)+'</td>';
+        h+='<td>'+p.desc+'</td>';
+        h+='<td>'+p.costCenter+'</td>';
+        // ===== عمود النوع الجديد =====
+        h+='<td><span class="badge '+(p.invoiceType==='فاتورة ضريبية'?'badge-red':p.invoiceType==='إيصال عادي'?'badge-green':'badge-blue')+'">'+p.invoiceType+'</span></td>';
+        h+='<td><button class="btn btn-blue btn-sm" onclick="editInv('+p.id+')">✏️</button> <button class="btn btn-red btn-sm" onclick="delInv('+p.id+')">🗑️</button></td>';
+        h+='</tr>';
+    }); 
+    return h;
+}
+
+// ===== دالة بناء الإجمالي المحدثة =====
+function buildInvFoot(ps){ 
+    var t=0; 
+    ps.forEach(function(p){ t+=Number(p.amount); }); 
+    return '<tr><td colspan="4">الإجمالي</td><td style="font-weight:900;color:#2563eb">'+f(t)+'</td><td colspan="4"></td></tr>'; 
+}
+
+// ===== دالة renderInvs المحدثة =====
+function renderInvs(){
+    var el = document.getElementById('p-invs'); 
+    if(!el) return;
+    var ro='<option value="">-- الكل --</option>'; 
+    D.reps.forEach(function(r){ ro+='<option value="'+r.id+'">'+r.name+'</option>'; });
+    var ao = buildInvAdvOpts(0);
+    var h='<div class="card"><div class="card-header"><h3>🧾 الفواتير ('+D.purchases.length+')</h3><div><button class="btn btn-green btn-sm" onclick="addInv()">➕ إضافة</button></div></div>';
+    h+='<div class="card-body-pad"><div class="form-grid">';
+    h+='<div class="form-group"><label class="form-label">المندوب</label><select class="form-input" id="invFilterRep" onchange="updateAdvFilter()">'+ro+'</select></div>';
+    h+='<div class="form-group"><label class="form-label">العهدة</label><select class="form-input" id="invFilterAdv" onchange="filterInvs()">'+ao+'</select></div>';
+    h+='<div class="form-group"><label class="form-label">💰 إجمالي العهد</label><input class="form-input" id="invAdvTotal" readonly value="0.00" style="font-weight:900;color:#3b82f6"></div>';
+    h+='<div class="form-group"><label class="form-label">🧾 إجمالي الفواتير</label><input class="form-input" id="invFilterTotal" readonly value="0.00" style="font-weight:900;color:#d97706"></div>';
+    h+='<div class="form-group"><label class="form-label">🟢 المتبقي</label><input class="form-input" id="invFilterRem" readonly value="0.00" style="font-weight:900;font-size:14px"><button class="btn btn-teal btn-sm" onclick="filterInvs()" style="margin-left:8px">🔄</button></div>';
+    h+='</div></div>';
+    h+='<div class="card-body"><table class="dt"><thead><tr>';
+    h+='<th>#</th><th>المندوب</th><th>رقم الفاتورة</th><th>المورد</th><th>الإجمالي</th><th>البيان</th><th>مركز التكلفة</th><th style="background:#fef3c3">📋 النوع</th><th>⚗️</th>';
+    h+='</tr></thead><tbody id="invBody">'+buildInvRows(D.purchases)+'</tbody>';
+    h+='<tfoot id="invFoot">'+buildInvFoot(D.purchases)+'</tfoot></table></div></div>';
+    el.innerHTML=h; 
+    calcInvFilterTotal(D.purchases);
+}
+</script>
